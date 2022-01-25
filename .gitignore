@@ -1,0 +1,65 @@
+ngrok.exe
+
+report.*
+
+junit-unit.xml
+junit-e2e.xml
+
+.env
+.env.test.local
+.env.gcf
+
+kontera-
+
+# compiled output
+/dist
+/node_modules
+
+# Nuxt
+.nuxt
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+
+# Tests
+/coverage
+/.nyc_output
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Visio
+*.~vsdx
+
+# k8s secrets
+k8s/secrets/**
+
+client/static/sw.js
+
+# ignore firebase secret
+firebase-service-account.json
+
+# webcomponents
+webcomponents
+secrets/**

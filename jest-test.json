@@ -1,0 +1,18 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "testEnvironment": "node",
+  "testRegex": ".test.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "testTimeout": 30000,
+  "setupFiles": ["./testing/SetupTests.ts"],
+  "moduleNameMapper": {
+    "@/(.*)": "<rootDir>/src/$1"
+  },
+  "collectCoverageFrom": ["./src/**/*.ts"],
+  "coveragePathIgnorePatterns": ["/node_modules/", "<rootDir>/testing/", ".e2e-spec.ts", ".spec.ts"],
+  "coverageReporters": ["json"],
+  "coverageDirectory": "coverage/unit",
+  "reporters": ["default", ["jest-junit", { "outputName": "junit-unit.xml" }]]
+}
