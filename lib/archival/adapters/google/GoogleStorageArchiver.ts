@@ -5,7 +5,7 @@ import { ColdStorageArchiver } from '../../ColdStorageArchiver';
 import { GoogleStorageService } from './GoogleStorageService';
 
 export class GoogleStorageArchiver implements ColdStorageArchiver {
-  ADAPTER_TYPE = 'GOOGLE';
+  ADAPTER_TYPE = 'GOOGLE_STORAGE';
   googleStorageService: GoogleStorageService;
 
   constructor(private archiveBucketName: string) {
@@ -26,14 +26,22 @@ export class GoogleStorageArchiver implements ColdStorageArchiver {
     }
   }
 
-  async archiveFile(file: File, meta: { sha256Hash: string; originalFilename?: string }): Promise<ArchivalFileState> {
-    const newFileName = meta.sha256Hash
+  async archiveFile(file: File, sha256Hash: string): Promise<ArchivalFileState> {
+    const [fileMetadata] = await file.getMetadata()
+
+    const metadata = {
+      originId: fileMetadata.id,
+      originName: fileMetadata.name,
+      originBucket: fileMetadata.bucket,
+      contentType: fileMetadata.contentType,
+      sha256Hash,
+      originalFilename: file.name
+    }
 
     // change filename to sha256Hash, store old name
-    meta.originalFilename = file.name;
-    file.name = newFileName;
+    file.name = sha256Hash;
 
-    const [copiedFile] = await file.copy(this.googleStorageService.gcsBucket, { metadata: meta });
+    const [copiedFile] = await file.copy(this.googleStorageService.gcsBucket, metadata);
     return this.state(copiedFile.name);
   }
 
@@ -64,8 +72,12 @@ export class GoogleStorageArchiver implements ColdStorageArchiver {
         filename: metadata.name,
         contentType: metadata.contentType
       },
-      metadata: {
+      storage: {
+        type: this.ADAPTER_TYPE,
+        bucket: this.googleStorageService.gcsBucket.name,
         archivedAt: metadata.timeCreated,
+      },
+      metadata: {
         md5Hash: metadata.md5Hash,
         sha256Hash: metadata.sha256Hash,
         size: metadata.size

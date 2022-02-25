@@ -11,5 +11,5 @@ export class FileArchivalDTO {
     @IsString()
     @IsUrl()
     @IsArray({ each: true })
-    webhooks?: string[]
+    webhooks: string[] = []
 }

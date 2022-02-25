@@ -3,8 +3,12 @@ export interface ArchivalFileState {
     filename: string;
     contentType: string;
   };
-  metadata: {
+  storage: {
+    type: string;
+    bucket: string;
     archivedAt: string;
+  },
+  metadata: {
     size: number;
     md5Hash: string;
     sha256Hash: string;
