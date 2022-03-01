@@ -22,13 +22,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { AffixedProof, JoinOperation, Blake2bOperation, Proof } from '@tzstamp/proof';
+import { JoinOperation, Blake2bOperation, Proof } from '@tzstamp/proof';
 import { MerkleTree } from '@tzstamp/tezos-merkle';
 import { Hex, Base58, Blake2b, concat, compare } from '@tzstamp/helpers';
 import { encodeBranch, encodeReveal, encodeAddress, encodeZarith, encodeContractId, encodeSignature, encodeVariable, encodeArbitrary } from './Micheline';
+import { KonteraProof } from './KonteraProof';
 
 export class ProofFactory {
-  static buildHighProof(block: any, opHash: any, root: any): Proof {
+  static buildHighProof(block: any, opHash: any, root: Buffer): Proof {
     const opGroup = block.operations[3].find((opGroup: any) => opGroup.hash == opHash);
     if (!opGroup) {
       throw new Error('Target operation group not found in fourth validation pass of the given block');
@@ -49,7 +50,7 @@ export class ProofFactory {
    * @param {object} opGroup Operation group data
    * @param {Uint8Array} root Aggregator root
    */
-  static buildOpGroupProof(opGroup: any, root: any) {
+  static buildOpGroupProof(opGroup: any, root: Buffer) {
     const [revealOp, txnOp] = ProofFactory.separateOperations(opGroup.contents);
     const revealSegment = revealOp ? encodeReveal(revealOp) : new Uint8Array();
     const txnSegment = concat(
@@ -70,8 +71,6 @@ export class ProofFactory {
     );
     const prepend = concat(encodeBranch(opGroup.branch), revealSegment, txnSegment);
     const append = encodeSignature(opGroup.signature);
-
-    console.log(prepend, append)
 
     return new Proof({
       hash: root,
@@ -136,6 +135,7 @@ export class ProofFactory {
    * @param {object} header Block header data
    */
   static buildBlockHashProof(network: any, header: any) {
+    const block = header.level
     const timestamp = new Date(header.timestamp);
     const prepend = concat(
       Hex.parse(
@@ -168,7 +168,9 @@ export class ProofFactory {
       encodeSignature(header.signature) // signature
     );
     const rawOpHash = Base58.decodeCheck(header.operations_hash, new Uint8Array([29, 159, 109]));
-    return new AffixedProof({
+    
+    return new KonteraProof({
+      block,
       hash: rawOpHash,
       operations: [new JoinOperation({ append, prepend }), new Blake2bOperation()],
       network,

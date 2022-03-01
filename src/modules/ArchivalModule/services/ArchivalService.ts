@@ -29,42 +29,45 @@ export class ArchivalService {
   @Cron('0 * * * * *') // do this every minute
   async commit() {
     this.logger.log('commit initiated...');
-    const { proof, hashes } = await this.tezosSigner.commit();
+    const proofs = await this.tezosSigner.commit();
 
-    if (hashes.length === 0) {
+    if (proofs.length === 0) {
       this.logger.log('commit cancelled. no hashes to commit.');
     }
 
-    this.logger.log(`committed ${hashes.length} hashes.`);
+    this.logger.log(`committed ${proofs.length} hashes.`);
     this.logger.log(`archiving proofs...`);
 
     // save proof for each file
     const archivedProofs = await Promise.all(
-      hashes.map(async (hash) => {
+      proofs.map(async (proof) => {
         const jsonProof = Buffer.from(JSON.stringify(proof))
 
-        const archivalFileState = await this.googleCloudStorageService.archiver.archiveData(jsonProof, {
-          name: `${hash}.proof.json`,
-          contentType: 'application/json'
-        });
-
-        if (this.callbackMap.has(hash)) {
-          const archivalCallback = this.callbackMap.get(hash)!;
-
-          for (const webhook of archivalCallback.webhooks) {
-            try {
-              this.logger.log(`calling webhook ${webhook}...`)
-              axios.post(webhook, { hash, proof, archivalFileState })
-            } catch (e) {
-              // ToDo: this should be a task
-              this.logger.error(`webhook ${webhook} could not be delivered`)
+        await Promise.all(proof.hashes.map(async hash => {
+          const archivalFileState = await this.googleCloudStorageService.archiver.archiveData(jsonProof, {
+            name: `${proof}.proof.json`,
+            contentType: 'application/json'
+          });
+  
+          if (this.callbackMap.has(hash)) {
+            const archivalCallback = this.callbackMap.get(hash)!;
+  
+            for (const webhook of archivalCallback.webhooks) {
+              try {
+                this.logger.log(`calling webhook ${webhook}...`)
+                axios.post(webhook, { hash, proof, archivalFileState })
+              } catch (e) {
+                // ToDo: this should be a task
+                this.logger.error(`webhook ${webhook} could not be delivered`)
+              }
             }
+  
+            this.callbackMap.delete(hash);
           }
+  
+          return archivalFileState;
+        }))
 
-          this.callbackMap.delete(hash);
-        }
-
-        return archivalFileState;
       })
     );
 
