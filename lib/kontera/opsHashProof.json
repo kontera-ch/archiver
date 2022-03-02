@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hash": "b19603eb726d47907a947776e1dbb4a2eec603337745f5dd542297fd5036e287",
+  "operations": [
+    { "type": "blake2b" },
+    { "type": "blake2b" },
+    { "type": "join", "prepend": "7c09f7c4d76ace86e1a7e1c7dc0a0c7edcaa8b284949320081131976a87760c3" },
+    { "type": "blake2b" },
+    { "type": "join", "prepend": "9231bf90b82cbd40830274a7cb801742bdc516c905763a196b578eba5204c46c" },
+    { "type": "blake2b" }
+  ]
+}

@@ -27,21 +27,32 @@ import { MerkleTree } from '@tzstamp/tezos-merkle';
 import { Hex, Base58, Blake2b, concat, compare } from '@tzstamp/helpers';
 import { encodeBranch, encodeReveal, encodeAddress, encodeZarith, encodeContractId, encodeSignature, encodeVariable, encodeArbitrary } from './Micheline';
 import { KonteraProof } from './KonteraProof';
+import * as fs from 'fs'
 
 export class ProofFactory {
   static buildHighProof(block: any, opHash: any, root: Buffer): Proof {
+    fs.writeFileSync('./meta.json', JSON.stringify({ opHash, root: root.toString('hex') }))
+    fs.writeFileSync('./blockResponse.json', JSON.stringify(block))
+
     const opGroup = block.operations[3].find((opGroup: any) => opGroup.hash == opHash);
+    
     if (!opGroup) {
       throw new Error('Target operation group not found in fourth validation pass of the given block');
     }
 
     const opGroupProof = ProofFactory.buildOpGroupProof(opGroup, root);
-
+    fs.writeFileSync('./opGroupProof.json', JSON.stringify(opGroupProof.toJSON()))
+    
     const opsHashProof = ProofFactory.buildOpsHashProof(block.operations, opHash);
-
+    fs.writeFileSync('./opsHashProof.json', JSON.stringify(opsHashProof.toJSON()))
+    
     const blockHashProof = ProofFactory.buildBlockHashProof(block.chain_id, block.header);
+    fs.writeFileSync('./blockHashProof.json', JSON.stringify(blockHashProof.toJSON()))
 
-    return opGroupProof.concat(opsHashProof).concat(blockHashProof);
+    const highProof = opGroupProof.concat(opsHashProof).concat(blockHashProof) as Proof
+    fs.writeFileSync('./highProof.json', JSON.stringify(highProof.toJSON()))
+
+    return highProof;
   }
 
   /**
@@ -69,6 +80,7 @@ export class ProofFactory {
         encodeArbitrary(Hex.parse(txnOp.parameters.value.bytes))
       ).slice(0, 9)
     );
+
     const prepend = concat(encodeBranch(opGroup.branch), revealSegment, txnSegment);
     const append = encodeSignature(opGroup.signature);
 

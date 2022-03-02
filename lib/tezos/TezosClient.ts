@@ -11,7 +11,7 @@ export class TezosClient {
     activation_code: '151ad175c146379263555aed39ee34f096cd2527'
   };
 
-  private TEZOS_NODE = 'https://hangzhounet.api.tez.ie/';
+  private TEZOS_NODE = 'https://rpc.tzkt.io/hangzhou2net';
 
   toolkit: TezosToolkit;
 

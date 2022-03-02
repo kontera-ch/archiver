@@ -1,22 +1,32 @@
 {
+  "ts-node": {
+    "files": true
+  },
   "compilerOptions": {
     "module": "commonjs",
+    "moduleResolution": "node",
     "declaration": true,
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "target": "esnext",
+    "target": "ES2021",
+    "lib": ["ES2021"],
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
+    "baseUrl": ".",
+    "allowJs": true,
     "incremental": true,
-    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "sourceRoot": "/",
+    "inlineSources": true,
+    "esModuleInterop": true,
+    "noEmitHelpers": true,
     "importHelpers": true,
     "strict": true,
     "paths": {
       "@/*": ["src/*"]
-    },
-    "types": ["node", "jest"]
-  }
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

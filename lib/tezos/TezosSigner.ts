@@ -3,6 +3,7 @@ import { ProofFactory } from './ProofFactory';
 import { blake2bHex } from 'blakejs';
 import { ContractAbstraction, ContractProvider, TezosToolkit } from '@taquito/taquito';
 import { Blake2bOperation, JoinOperation, Operation, Proof, ProofTemplate } from '@tzstamp/proof';
+import * as fs from 'fs'
 
 const blake2bHashFunction = (input: string) => blake2bHex(input, undefined, 32);
 
@@ -58,9 +59,8 @@ export class TezosSigner {
     hashes.forEach((hash, index) => {
       const path = merkleTree.getProof(blake2bHashFunction(hash)) as { position: 'left' | 'right'; data: Buffer }[];
       const lowProof = this.merklePathToProof(Buffer.from(hash), path);
-
-      console.log(Buffer.from(lowProof.hash).toString('hex'), Buffer.from(lowProof.derivation).toString('hex'));
-      console.log(Buffer.from(highProof.hash).toString('hex'));
+      
+      fs.writeFileSync('./lowProof.json', JSON.stringify(lowProof.toJSON()))
 
       const fullProof = lowProof.concat(highProof);
 

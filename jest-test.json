@@ -10,7 +10,7 @@
   "moduleNameMapper": {
     "@/(.*)": "<rootDir>/src/$1"
   },
-  "collectCoverageFrom": ["./src/**/*.ts"],
+  "collectCoverageFrom": ["./src/**/*.ts", "./lib/**/*.ts"],
   "coveragePathIgnorePatterns": ["/node_modules/", "<rootDir>/testing/", ".e2e-spec.ts", ".spec.ts"],
   "coverageReporters": ["json"],
   "coverageDirectory": "coverage/unit",
