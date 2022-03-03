@@ -1,5 +1,5 @@
 import { File } from '@google-cloud/storage';
-import { ArchivalProofState } from 'lib/archival/ArchivalProofState';
+import { ArchivalProofState } from '@/lib/archival/ArchivalProofState';
 import { ArchivalFileState } from '../../ArchivalFileState';
 import { ColdStorageArchiver } from '../../ColdStorageArchiver';
 import { GoogleStorageService } from './GoogleStorageService';

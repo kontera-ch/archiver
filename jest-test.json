@@ -11,7 +11,7 @@
     "@/(.*)": "<rootDir>/src/$1"
   },
   "collectCoverageFrom": ["./src/**/*.ts", "./lib/**/*.ts"],
-  "coveragePathIgnorePatterns": ["/node_modules/", "<rootDir>/testing/", ".e2e-spec.ts", ".spec.ts"],
+  "coveragePathIgnorePatterns": ["/node_modules/", "<rootDir>/testing/", ".e2e-spec.ts", ".test.ts"],
   "coverageReporters": ["json"],
   "coverageDirectory": "coverage/unit",
   "reporters": ["default", ["jest-junit", { "outputName": "junit-unit.xml" }]]

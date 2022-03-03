@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GoogleStorageArchiver } from 'lib/archival/adapters/google/GoogleStorageArchiver';
-import { GoogleStorageService } from 'lib/archival/adapters/google/GoogleStorageService';
+import { GoogleStorageArchiver } from '@/lib/archival/adapters/google/GoogleStorageArchiver';
+import { GoogleStorageService } from '@/lib/archival/adapters/google/GoogleStorageService';
 
 @Injectable()
 export class GoogleCloudStorageService {

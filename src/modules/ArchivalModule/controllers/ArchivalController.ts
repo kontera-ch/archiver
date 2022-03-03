@@ -4,13 +4,18 @@ import { GoogleCloudStorageService } from '@/modules/GoogleCloud/services/Google
 import { FileArchivalDTO } from './dtos/FileArchivalDTO';
 import { createHash } from 'crypto'
 import axios from 'axios'
+import { StampQueueService } from '../services/StampQueueService';
+import { StampDTO } from './dtos/StampDTO';
 
 @Controller('/api/archiver')
 export class ArchivalController {
-  constructor(private readonly archivalService: ArchivalService, private readonly googleCloudStorageService: GoogleCloudStorageService) {}
+  constructor(private readonly googleCloudStorageService: GoogleCloudStorageService, private readonly stampQueueService: StampQueueService) {}
 
-  @Post('proof')
-  async proofFile(@Body() fileArchivalDTO: FileArchivalDTO) {
+  @Post('stamp')
+  async stamp(@Body() stampDTO: StampDTO) {
+    this.stampQueueService.schedule(stampDTO)
+
+    /*
     const file = await GoogleCloudStorageService.googleCloudStorageServiceForBucket(fileArchivalDTO.bucket).file(fileArchivalDTO.filePath)
 
     // hash the provided file using sha256
@@ -24,17 +29,8 @@ export class ArchivalController {
       reject(error)
     }))
 
-    // check if we have previously archived this very file (TODO: do we need to hash in the user id or something?)
-    /*
-    const isFileArchived = await this.googleCloudStorageService.archiver.exists(sha256Hash)
-
-    if (isFileArchived) {
-      return this.state(sha256Hash)
-    }
-    */
-
-    // we have not, so lets stamp it
     this.archivalService.stamp(sha256Hash, { webhooks: fileArchivalDTO.webhooks })
+    */
 
     return {
       proof: {
@@ -59,16 +55,13 @@ export class ArchivalController {
     }))
 
     // check if we have previously archived this very file (TODO: do we need to hash in the user id or something?)
-    /*
     const isFileArchived = await this.googleCloudStorageService.archiver.exists(sha256Hash)
 
     if (isFileArchived) {
       return this.state(sha256Hash)
     }
-    */
 
-    // we have not, so lets stamp it
-
+    // we have not, so lets archive it
     const archivalFileState = await this.googleCloudStorageService.archiver.archiveFile(file, sha256Hash)
 
     await Promise.all(fileArchivalDTO.webhooks.map(async webhook => {

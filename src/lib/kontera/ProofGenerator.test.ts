@@ -1,5 +1,3 @@
-import { Proof } from "@tzstamp/proof";
-import { ProofFactory } from "../tezos/ProofFactory";
 import { NoopContract } from "../tezos/contract/NoopContract";
 import { TezosClient } from "../tezos/TezosClient";
 import { ProofGenerator } from "./ProofGenerator";
@@ -36,34 +34,33 @@ describe('HighProof', () => {
 
   test('buildOpGroupProof', async () => {
     const opGroupProof = JSON.parse(fs.readFileSync('./lib/kontera/opGroupProof.json', 'utf8'))
-    const proofGenerator = new ProofGenerator(tezosContract.getContract(), tezosClient.toolkit)
-    const proofGeneratorProof = await proofGenerator.buildOpGroupProof(block, operationHash, Buffer.from(rootHash, 'hex'))
+    const proofGeneratorProof = await ProofGenerator.buildOpGroupProof(block, operationHash, Buffer.from(rootHash, 'hex'))
     expect(proofGeneratorProof.toJSON()).toEqual(opGroupProof)
 
   })
 
   test('buildOpsHashProof', async () => {
     const opsHashProof = JSON.parse(fs.readFileSync('./lib/kontera/opsHashProof.json', 'utf8'))
-    const proofGenerator = new ProofGenerator(tezosContract.getContract(), tezosClient.toolkit)
-    const proofGeneratorProof = await proofGenerator.buildOpsHashProof(block, operationHash)
+    const proofGeneratorProof = await ProofGenerator.buildOpsHashProof(block, operationHash)
 
     expect(proofGeneratorProof.toJSON()).toEqual(opsHashProof)
   })
 
   test('buildBlockHashProof', async () => {
     const blockHashProof = JSON.parse(fs.readFileSync('./lib/kontera/blockHashProof.json', 'utf8'))
-    const proofGenerator = new ProofGenerator(tezosContract.getContract(), tezosClient.toolkit)
-    const proofGeneratorProof = await proofGenerator.buildBlockHashProof(block)
+    const proofGeneratorProof = await ProofGenerator.buildBlockHeaderProof(block)
 
     expect(proofGeneratorProof.toJSON()).toEqual(blockHashProof)
   })
 
   test('buildFullProof', async () => {
+    /*
     const blockHashProof = JSON.parse(fs.readFileSync('./lib/kontera/blockHashProof.json', 'utf8'))
     const proofGenerator = new ProofGenerator(tezosContract.getContract(), tezosClient.toolkit)
     const proofGeneratorProof = await proofGenerator.buildProof(block)
 
     expect(proofGeneratorProof.toJSON()).toEqual(blockHashProof)
+    */
   })
 
 })

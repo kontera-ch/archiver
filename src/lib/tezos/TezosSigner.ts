@@ -1,43 +1,37 @@
 import { MerkleTree } from 'merkletreejs';
-import { ProofFactory } from './ProofFactory';
 import { blake2bHex } from 'blakejs';
 import { ContractAbstraction, ContractProvider, TezosToolkit } from '@taquito/taquito';
-import { Blake2bOperation, JoinOperation, Operation, Proof, ProofTemplate } from '@tzstamp/proof';
-import * as fs from 'fs'
+import { ProofGenerator } from '../kontera/ProofGenerator';
+import { Blake2bOperation } from '@/lib/kontera/proof/operations/types/Blake2bOperation';
+import { Operation } from '@/lib/kontera/proof/operations/Operation';
+import { JoinOperation } from '@/lib/kontera/proof/operations/types/JoinOperation';
+import { Proof } from '@/lib/kontera/proof/Proof';
+import { SerializedTezosBlockHeaderProof } from '../kontera/proof/TezosBlockHeaderProof';
 
 const blake2bHashFunction = (input: string) => blake2bHex(input, undefined, 32);
 
 export class TezosSigner {
-  private hashesToInclude = new Set<string>();
-
   constructor(private contract: ContractAbstraction<ContractProvider>, private tezosToolkit: TezosToolkit, private logger: { log: (msg: string) => void } = { log: console.log }) {
     //
   }
 
-  stamp(hash: string) {
-    this.hashesToInclude.add(hash);
-    this.logger.log(`added ${hash} to hashes. ${this.hashesToInclude.size} pending.`);
-  }
-
-  private digest(): { hashes: string[]; merkleTree: MerkleTree } {
-    const hashes = [...this.hashesToInclude.values()];
+  private digest(hashesToInclude: Set<string>): { hashes: string[]; merkleTree: MerkleTree } {
+    const hashes = [...hashesToInclude.values()];
     const merkleTree = new MerkleTree([], blake2bHashFunction, { duplicateOdd: true });
-
-    this.hashesToInclude.clear();
 
     hashes.forEach((data) => merkleTree.addLeaf(Buffer.from(data), true));
 
     return { hashes, merkleTree };
   }
 
-  async commit(): Promise<{ proof: ProofTemplate; rootHash?: string; hashes: string[] }[]> {
-    const { hashes, merkleTree } = this.digest();
+  async commit(hashesToInclude: Set<string>): Promise<{ [x: string]: SerializedTezosBlockHeaderProof } | null> {
+    const { hashes, merkleTree } = this.digest(hashesToInclude);
 
     const rootHash = merkleTree.getRoot();
 
     if (hashes.length === 0) {
       this.logger.log('skipping this commit, no hashes.');
-      return [];
+      return null;
     }
 
     const rootHashHex = rootHash.toString('hex');
@@ -52,22 +46,24 @@ export class TezosSigner {
     const block = await this.tezosToolkit.rpc.getBlock({ block: String(level - 2) }); // 2 blocks before 3rd confirmation
     this.logger.log(`Got block ${level}, created at ${block.header.timestamp}, constructing proof`);
 
-    const highProof = ProofFactory.buildHighProof(block, opGroup.hash, rootHash);
+    const opGroupProof = await ProofGenerator.buildOpGroupProof(block, opGroup.hash, rootHash);
+    const opHashProof = await ProofGenerator.buildOpsHashProof(block, opGroup.hash)
+    const blockHeaderProof = await ProofGenerator.buildBlockHeaderProof(block);
 
-    const proofs: { proof: ProofTemplate; rootHash?: string; hashes: string[] }[] = [];
+    const tezosProof = blockHeaderProof.prependProof(opHashProof.prependProof(opGroupProof))
 
-    hashes.forEach((hash, index) => {
+    const proofs: Array<[string, SerializedTezosBlockHeaderProof]> = [];
+
+    hashes.forEach((hash) => {
       const path = merkleTree.getProof(blake2bHashFunction(hash)) as { position: 'left' | 'right'; data: Buffer }[];
-      const lowProof = this.merklePathToProof(Buffer.from(hash), path);
-      
-      fs.writeFileSync('./lowProof.json', JSON.stringify(lowProof.toJSON()))
+      const merkleTreeProof = this.merklePathToProof(Buffer.from(hash), path);
 
-      const fullProof = lowProof.concat(highProof);
+      const fullProof = tezosProof.prependProof(merkleTreeProof);
 
-      proofs.push({ proof: fullProof.toJSON(), rootHash: rootHashHex, hashes });
+      proofs.push([hash, fullProof.toJSON()]);
     });
 
-    return proofs;
+    return Object.fromEntries(proofs)
   }
 
   merklePathToProof(hash: Buffer, merklePath: { position: 'left' | 'right'; data: Buffer }[]) {
