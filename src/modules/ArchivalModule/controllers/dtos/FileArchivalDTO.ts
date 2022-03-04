@@ -1,4 +1,4 @@
-import { IsArray, IsIn, IsString, IsUrl } from 'class-validator'
+import { IsArray, IsIn, IsString, IsUrl, IsUUID } from 'class-validator'
 
 export class FileArchivalDTO {
     @IsString()
@@ -6,7 +6,13 @@ export class FileArchivalDTO {
     bucket!: string
 
     @IsString()
+    fileHash!: string
+
+    @IsString()
     filePath!: string
+
+    @IsUUID()
+    fileId!: string
 
     @IsString()
     @IsUrl()
