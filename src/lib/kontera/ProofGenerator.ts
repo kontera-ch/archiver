@@ -1,4 +1,3 @@
-import { blake2b } from 'blakejs';
 import { BlockResponse, OperationContents, OperationContentsAndResult, OperationContentsAndResultReveal, OperationContentsAndResultTransaction } from '@taquito/rpc';
 import { localForger } from '@taquito/local-forging';
 import bs58check from 'bs58check';
@@ -9,6 +8,8 @@ import { Proof } from './proof/Proof';
 import { Blake2bOperation } from './proof/operations/types/Blake2bOperation';
 import { JoinOperation } from './proof/operations/types/JoinOperation';
 import TezosBlockHeaderProof from './proof/TezosBlockHeaderProof';
+import { blake2b } from './helpers/blake2b';
+
 export class ProofGenerator {
   static async buildOpGroupProof(block: BlockResponse, opHash: string, root: Buffer) {
     const operations = block.operations;
@@ -33,6 +34,11 @@ export class ProofGenerator {
 
     // now comes a hacky part - remove the actual root hash from the binary, as it will get inserted automatically again when we sandwich it with prepend/append
     const rootHashIndex = Buffer.from(prepend).toString('hex').indexOf(Buffer.from(root).toString('hex'));
+
+    if (rootHashIndex === -1) {
+      throw new Error('unable to remove rootHash')
+    }
+
     const finalPrepend = new Uint8Array(Buffer.from(Buffer.from(prepend).toString('hex').slice(0, rootHashIndex), 'hex'));
 
     if (!operationEntry.signature) {

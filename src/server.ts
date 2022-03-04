@@ -37,7 +37,7 @@ export async function bootstrap(): Promise<{
   app.use(text({ verify: rawBodySaver, limit: '50mb' }));
   app.useGlobalInterceptors(new SentryInterceptor());
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
-  app.enableCors();
+  app.enableShutdownHooks();
 
   const configService = app.get(ConfigService);
   sentryLogger.configureSentry(configService, app);

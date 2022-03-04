@@ -7,7 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { JobWithDoneCallback } from 'pg-boss'
 import { StampDTO } from '../controllers/dtos/StampDTO';
 import { ArchivalService } from './ArchivalService';
-import { StampWebhookQueueService } from './StampWebhookQueueService';
+import { WebhookQueueService } from './WebhookQueueService';
 
 export interface StampJobResponse {
  hash: string; 
@@ -20,7 +20,7 @@ export class StampQueueService extends PgBossConsumerService<StampDTO, StampJobR
   logger = new Logger(StampQueueService.name);
   queueName = 'stamp-queue';
 
-  constructor(pgBossService: PgBossService, private stampWebhookQueueService: StampWebhookQueueService, private archivalService: ArchivalService, configService: ConfigService) {
+  constructor(pgBossService: PgBossService, private webhookQueueService: WebhookQueueService, private archivalService: ArchivalService, configService: ConfigService) {
     super(pgBossService, { newJobCheckIntervalSeconds: 60, batchSize: 100 });
   }
 
@@ -50,7 +50,7 @@ export class StampQueueService extends PgBossConsumerService<StampDTO, StampJobR
   }
 
   async complete(job: { data: { request: { data: StampDTO }, response: StampJobResponse }}) {
-    this.stampWebhookQueueService.schedule({ webhooks: job.data.request.data.webhooks, ...job.data.response }, {
+    this.webhookQueueService.schedule({ webhooks: job.data.request.data.webhooks, webhookData: job.data.response }, {
       retryBackoff: true,
       retryDelay: 60,
       retryLimit: 10,

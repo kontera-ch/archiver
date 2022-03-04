@@ -8,16 +8,16 @@ export class GoogleCloudStorageService {
   archiver: GoogleStorageArchiver;
 
   constructor(private configService: ConfigService) {
-    const bucketName = this.configService.get<string>('GCS_BUCKET_NAME');
+    const bucketName = this.configService.get<string>('GCS_ARCHIVE_BUCKET_NAME');
 
     if (!bucketName) {
-      throw new Error('please configure GCS_BUCKET_NAME');
+      throw new Error('please configure GCS_ARCHIVE_BUCKET_NAME');
     }
 
     this.archiver = new GoogleStorageArchiver(bucketName);
   }
 
-  static googleCloudStorageServiceForBucket(bucketName: string) {
+  googleCloudStorageServiceForBucket(bucketName: string) {
     return new GoogleStorageService(bucketName)
   }
 }

@@ -13,7 +13,7 @@ export abstract class PgBossConsumerService<JobRequest extends object, JobRespon
   public async onModuleInit() {
     await this.pgBossService.pgBoss().work<JobRequest, JobResponse>(this.queueName, this.pgBossWorkOptions, (job) => {
       this.logger.log(`job [${Array.isArray(job) ? job.map(j => j.id) : job.id}] started`)
-      this.handler(job)
+      return this.handler(job)
     });
     await this.pgBossService.pgBoss().onComplete(this.queueName, this.complete.bind(this));
   }

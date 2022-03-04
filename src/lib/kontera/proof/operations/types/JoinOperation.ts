@@ -34,10 +34,18 @@ export class JoinOperation extends Operation {
     }
 
     toJSON(): OperationTemplate {
-        return {
-            type: 'join',
-            prepend: this.prepend ? Buffer.from(this.prepend).toString('hex') : undefined,
-            append: this.append ? Buffer.from(this.append).toString('hex'): undefined
-        };
+        const jsonOperation: OperationTemplate = {
+            type: 'join'
+        }
+
+        if (this.prepend) {
+            jsonOperation.prepend = Buffer.from(this.prepend).toString('hex')
+        }
+
+        if (this.append) {
+            jsonOperation.append = Buffer.from(this.append).toString('hex')
+        }
+
+        return jsonOperation
     }
 }

@@ -1,36 +1,17 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
-import { ArchivalService } from '@/modules/ArchivalModule/services/ArchivalService';
 import { GoogleCloudStorageService } from '@/modules/GoogleCloud/services/GoogleCloudStorageService';
 import { FileArchivalDTO } from './dtos/FileArchivalDTO';
-import { createHash } from 'crypto'
-import axios from 'axios'
 import { StampQueueService } from '../services/StampQueueService';
 import { StampDTO } from './dtos/StampDTO';
+import { ArchiveQueueService } from '../services/ArchiveQueueService';
 
 @Controller('/api/archiver')
 export class ArchivalController {
-  constructor(private readonly googleCloudStorageService: GoogleCloudStorageService, private readonly stampQueueService: StampQueueService) {}
+  constructor(private readonly googleCloudStorageService: GoogleCloudStorageService, private readonly stampQueueService: StampQueueService, private readonly archiveQueueService: ArchiveQueueService) {}
 
   @Post('stamp')
   async stamp(@Body() stampDTO: StampDTO) {
     this.stampQueueService.schedule(stampDTO)
-
-    /*
-    const file = await GoogleCloudStorageService.googleCloudStorageServiceForBucket(fileArchivalDTO.bucket).file(fileArchivalDTO.filePath)
-
-    // hash the provided file using sha256
-    const hashFunction = createHash('sha256')
-    
-    const sha256Hash: string = await new Promise((resolve, reject) => file.createReadStream().on('data', (data: any) => {
-      hashFunction.update(data)
-    }).on('end', () => {
-      resolve(hashFunction.digest('hex'))
-    }).on('error', (error) => {
-      reject(error)
-    }))
-
-    this.archivalService.stamp(sha256Hash, { webhooks: fileArchivalDTO.webhooks })
-    */
 
     return {
       proof: {
@@ -41,34 +22,7 @@ export class ArchivalController {
 
   @Post('archive')
   async archiveBucketFile(@Body() fileArchivalDTO: FileArchivalDTO) {
-    const file = await GoogleCloudStorageService.googleCloudStorageServiceForBucket(fileArchivalDTO.bucket).file(fileArchivalDTO.filePath)
-
-    // hash the provided file using sha256
-    const hashFunction = createHash('sha256')
-    
-    const sha256Hash: string = await new Promise((resolve, reject) => file.createReadStream().on('data', (data: any) => {
-      hashFunction.update(data)
-    }).on('end', () => {
-      resolve(hashFunction.digest('hex'))
-    }).on('error', (error) => {
-      reject(error)
-    }))
-
-    // check if we have previously archived this very file (TODO: do we need to hash in the user id or something?)
-    const isFileArchived = await this.googleCloudStorageService.archiver.exists(sha256Hash)
-
-    if (isFileArchived) {
-      return this.state(sha256Hash)
-    }
-
-    // we have not, so lets archive it
-    const archivalFileState = await this.googleCloudStorageService.archiver.archiveFile(file, sha256Hash)
-
-    await Promise.all(fileArchivalDTO.webhooks.map(async webhook => {
-      return axios.post(webhook, { archivalFileState })
-    }))
-
-    return archivalFileState
+    await this.archiveQueueService.schedule(fileArchivalDTO)
   }
 
   @Get('state/:hash')

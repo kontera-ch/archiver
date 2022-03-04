@@ -1,0 +1,184 @@
+stages:
+  - test
+  - build-and-publish
+  - deploy
+  - sentry
+
+variables:
+  DOCKER_IMAGE: eu.gcr.io/invoicebutler-a681a/kontera-archiver
+  GOOGLE_PROJECT: invoicebutler-a681a
+  CACHE_FALLBACK_KEY: npm-cache
+
+test:
+  stage: test
+  image: node:16-alpine
+  tags:
+    - container
+  script:
+    - export NODE_ENV=development
+    - npm ci --cache .npm --prefer-offline
+    - npm run build
+    - npm run test -- --coverage
+    - mv coverage/unit/coverage-final.json coverage/unit.json
+    - npm run test:e2e -- --coverage
+    - mv coverage/e2e/coverage-final.json coverage/e2e.json
+    - npm run test:nyc -- merge coverage coverage/merged-coverage.json
+    - npm run test:nyc -- report -t coverage --reporter=cobertura --reporter=html --reporter=text
+  cache:
+    key: $CI_COMMIT_REF_SLUG
+    paths:
+      - .npm/
+  services:
+    - postgres:12-alpine
+  variables:
+    TYPEORM_HOST: postgres
+    POSTGRES_DB: kontera-archiver
+    POSTGRES_USER: kontera
+    POSTGRES_PASSWORD: kontera
+    POSTGRES_HOST_AUTH_METHOD: trust
+  artifacts:
+    paths:
+      - ./dist
+      - junit-unit.xml
+      - junit-e2e.xml
+    expire_in: 1 week
+    reports:
+      cobertura: coverage/cobertura-coverage.xml
+      junit:
+        - junit-unit.xml
+        - junit-e2e.xml
+
+build-and-publish:
+  needs:
+    - test
+  variables:
+    GOOGLE_APPLICATION_CREDENTIALS: $GOOGLE_APPLICATION_CREDENTIALS
+  stage: build-and-publish
+  before_script:
+    - echo $GOOGLE_APPLICATION_CREDENTIALS > ./credentials.json
+    - gcloud auth activate-service-account --key-file=./credentials.json
+    - gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://eu.gcr.io
+  script:
+    - docker pull $DOCKER_IMAGE:latest || true
+    - docker build --cache-from $DOCKER_IMAGE:latest --build-arg GIT_SHA=$CI_COMMIT_SHA -t $DOCKER_IMAGE:$CI_COMMIT_SHA -t $DOCKER_IMAGE:latest .
+    - docker push $DOCKER_IMAGE:$CI_COMMIT_SHA
+    - docker push $DOCKER_IMAGE:latest
+  only:
+    - master
+    - development
+
+build-and-publish-feature-branch:
+  extends: build-and-publish
+  when: manual
+  script:
+    - docker pull $DOCKER_IMAGE:latest || true
+    - docker build --cache-from $DOCKER_IMAGE:latest --build-arg GIT_SHA=$CI_COMMIT_SHA -t $DOCKER_IMAGE:$CI_COMMIT_SHA .
+    - docker push $DOCKER_IMAGE:$CI_COMMIT_SHA
+  only:
+    - /^feature\/.*/
+
+deploy-development:
+  needs:
+    - build-and-publish
+  variables:
+    GOOGLE_APPLICATION_CREDENTIALS: $GOOGLE_APPLICATION_CREDENTIALS
+  stage: deploy
+  image: google/cloud-sdk
+  tags:
+    - container
+  before_script:
+    - echo $GOOGLE_APPLICATION_CREDENTIALS > ./credentials.json
+    - gcloud auth activate-service-account --key-file=./credentials.json
+  script:
+    - gcloud run services update development-archiver --ingress internal-and-cloud-load-balancing --platform managed --memory 1Gi --cpu 1 --port 4343 --min-instances=0 --update-labels environment=development,region=zurich --region europe-west6 --project $GOOGLE_PROJECT --image $DOCKER_IMAGE:$CI_COMMIT_SHA --add-cloudsql-instances=$CLOUD_SQL_INSTANCE --set-env-vars ENVIRONMENT=development,PGBOSS_DATABASE=$PGBOSS_DATABASE,PGBOSS_HOST=$PGBOSS_HOST,GOOGLE_SECRET_RESOURCE_ID=$GOOGLE_SECRET_RESOURCE_ID,GCS_ARCHIVE_BUCKET_NAME=$GCS_ARCHIVE_BUCKET_NAME
+    - gcloud run services update-traffic development-archiver --platform managed --region europe-west6 --project $GOOGLE_PROJECT --to-latest
+  environment: development
+  only:
+    - development
+
+deploy-feature-to-development:
+  needs:
+    - build-and-publish-feature-branch
+  extends: deploy-development
+  when: manual
+  only:
+    - /^feature\/.*/
+
+deploy-staging:
+  needs:
+    - build-and-publish
+  variables:
+    GOOGLE_APPLICATION_CREDENTIALS: $GOOGLE_APPLICATION_CREDENTIALS
+  stage: deploy
+  image: google/cloud-sdk
+  tags:
+    - container
+  before_script:
+    - echo $GOOGLE_APPLICATION_CREDENTIALS > ./credentials.json
+    - gcloud auth activate-service-account --key-file=./credentials.json
+  script:
+    - gcloud run services update staging-archiver --ingress internal-and-cloud-load-balancing --platform managed --memory 2Gi --cpu 2 --port 4343 --min-instances=0 --update-labels environment=staging,region=zurich --region europe-west6 --project $GOOGLE_PROJECT --image $DOCKER_IMAGE:$CI_COMMIT_SHA --add-cloudsql-instances=$CLOUD_SQL_INSTANCE --set-env-vars ENVIRONMENT=staging,TYPEORM_DATABASE=$TYPEORM_DATABASE,TYPEORM_HOST=$TYPEORM_HOST,GOOGLE_SECRET_RESOURCE_ID=$GOOGLE_SECRET_RESOURCE_ID,GCS_ARCHIVE_BUCKET_NAME=$GCS_ARCHIVE_BUCKET_NAME
+    - gcloud run services update-traffic staging-archiver --platform managed --region europe-west6 --project $GOOGLE_PROJECT --to-latest
+  environment: staging
+  only:
+    - master
+
+deploy-production:
+  needs:
+    - build-and-publish
+  variables:
+    GOOGLE_APPLICATION_CREDENTIALS: $GOOGLE_APPLICATION_CREDENTIALS
+  stage: deploy
+  when: manual
+  image: google/cloud-sdk
+  tags:
+    - container
+  before_script:
+    - echo $GOOGLE_APPLICATION_CREDENTIALS > ./credentials.json
+    - gcloud auth activate-service-account --key-file=./credentials.json
+  script:
+    - gcloud run services update archiver --ingress internal-and-cloud-load-balancing --platform managed --memory 2Gi --cpu 2 --port 4343 --min-instances=1 --update-labels environment=production,region=zurich --region europe-west6 --project $GOOGLE_PROJECT --image $DOCKER_IMAGE:$CI_COMMIT_SHA --add-cloudsql-instances=$CLOUD_SQL_INSTANCE --set-env-vars ENVIRONMENT=production,TYPEORM_DATABASE=$TYPEORM_DATABASE,TYPEORM_HOST=$TYPEORM_HOST,GOOGLE_SECRET_RESOURCE_ID=$GOOGLE_SECRET_RESOURCE_ID,GCS_ARCHIVE_BUCKET_NAME=$GCS_ARCHIVE_BUCKET_NAME
+    - gcloud run services update-traffic archiver --platform managed --region europe-west6 --project $GOOGLE_PROJECT --to-latest
+  environment: production
+  only:
+    - master
+
+sentry-development:
+  variables:
+    SENTRY_AUTH_TOKEN: $SENTRY_AUTH_TOKEN
+    SENTRY_ORG: kontera-14
+    SENTRY_PROJECT: kontera-archiver
+    ENVIRONMENT: development
+  image: getsentry/sentry-cli
+  stage: sentry
+  tags:
+    - container
+  script:
+    - export VERSION=$(sentry-cli releases propose-version)
+    - echo $VERSION
+    - sentry-cli releases new -p $SENTRY_PROJECT $VERSION
+    - sentry-cli releases set-commits --auto $VERSION || true
+    - sentry-cli releases deploys $VERSION new -e $ENVIRONMENT
+    - sentry-cli releases files $VERSION upload-sourcemaps ./dist
+    - sentry-cli releases finalize $VERSION
+  only:
+    - development
+  needs: ['test', 'deploy-development']
+  dependencies:
+    - test
+
+sentry-staging:
+  extends: sentry-development
+  variables:
+    ENVIRONMENT: staging
+  only:
+    - master
+  needs: ['test', 'deploy-staging']
+
+sentry-production:
+  extends: sentry-development
+  variables:
+    ENVIRONMENT: production
+  only:
+    - master
+  needs: ['test', 'deploy-production']

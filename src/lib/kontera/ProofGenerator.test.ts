@@ -1,11 +1,10 @@
-import { NoopContract } from "../tezos/contract/NoopContract";
-import { TezosClient } from "../tezos/TezosClient";
-import { ProofGenerator } from "./ProofGenerator";
+import { NoopContract } from '../tezos/contract/NoopContract';
+import { TezosClient } from '../tezos/TezosClient';
+import { ProofGenerator } from './ProofGenerator';
 
-const fs = require('fs')
+const fs = require('fs');
 
 describe('HighProof', () => {
-
   const tezosTestKey = {
     pkh: 'tz1KozcMMfwv7nXc2wvg9b3dbhfkak1mBbdd',
     mnemonic: ['rather', 'initial', 'dizzy', 'fold', 'record', 'crack', 'urge', 'among', 'door', 'vehicle', 'item', 'swim', 'menu', 'phone', 'wash'],
@@ -15,52 +14,49 @@ describe('HighProof', () => {
     activation_code: '151ad175c146379263555aed39ee34f096cd2527'
   };
 
-  const fileHash = 'eaf54ba2d3b9564007cbc314d305e4a0c690bdeb28276445cb58f54be79cd6c4'
-  const rootHash = '6762af05125f90f2bcdec1ed167ecfb6ddcbf7af87df0c367638a4503f646006'
-  const operationHash = 'oozRU4ktAyHVTtfArwv3ravcAAMFmEQp64oscVdsFmEtbBpwP5D'
+  const fileHash = 'eaf54ba2d3b9564007cbc314d305e4a0c690bdeb28276445cb58f54be79cd6c4';
+  const rootHash = '6762af05125f90f2bcdec1ed167ecfb6ddcbf7af87df0c367638a4503f646006';
+  const operationHash = 'oozRU4ktAyHVTtfArwv3ravcAAMFmEQp64oscVdsFmEtbBpwP5D';
 
-  const block = JSON.parse(fs.readFileSync('./lib/kontera/blockResponse.json', 'utf8'))
+  const block = JSON.parse(fs.readFileSync('./testing/data/blockResponse.json', 'utf8'));
 
-  let tezosClient!: TezosClient
-  let tezosContract!: NoopContract
+  let tezosClient!: TezosClient;
+  let tezosContract!: NoopContract;
 
   beforeAll(async () => {
-    tezosClient = new TezosClient()
-    tezosContract = new NoopContract('KT1FzuCxZqCMNYW9rGEHMpHdRsrjZ7eqFS3U', tezosClient.toolkit)
-    
-    await tezosContract.init()
-  })
+    tezosClient = new TezosClient();
+    tezosContract = new NoopContract('KT1FzuCxZqCMNYW9rGEHMpHdRsrjZ7eqFS3U', tezosClient.toolkit);
 
+    await tezosContract.init();
+  });
+
+  test('prependProof', async () => {
+    const proof = await ProofGenerator.buildOpGroupProof(block, operationHash, Buffer.from(rootHash, 'hex'));
+    const proof2 = await ProofGenerator.buildOpsHashProof(block, operationHash);
+
+    const combinedProof = proof2.prependProof(proof);
+
+    expect(combinedProof.operations.length).toEqual(proof.operations.length + proof2.operations.length);
+    expect(combinedProof.operations.map((o) => o.toJSON())).toEqual([...proof.operations.map((o) => o.toJSON()), ...proof2.operations.map((o) => o.toJSON())]);
+    expect(combinedProof.hash).toEqual(proof.hash);
+    expect(combinedProof.derivation).toEqual(proof2.derivation);
+  });
 
   test('buildOpGroupProof', async () => {
-    const opGroupProof = JSON.parse(fs.readFileSync('./lib/kontera/opGroupProof.json', 'utf8'))
-    const proofGeneratorProof = await ProofGenerator.buildOpGroupProof(block, operationHash, Buffer.from(rootHash, 'hex'))
-    expect(proofGeneratorProof.toJSON()).toEqual(opGroupProof)
-
-  })
+    const opGroupProof = JSON.parse(fs.readFileSync('./testing/data/opGroupProof.json', 'utf8'));
+    const proofGeneratorProof = await ProofGenerator.buildOpGroupProof(block, operationHash, Buffer.from(rootHash, 'hex'));
+    expect(proofGeneratorProof.toJSON()).toEqual(opGroupProof);
+  });
 
   test('buildOpsHashProof', async () => {
-    const opsHashProof = JSON.parse(fs.readFileSync('./lib/kontera/opsHashProof.json', 'utf8'))
-    const proofGeneratorProof = await ProofGenerator.buildOpsHashProof(block, operationHash)
-
-    expect(proofGeneratorProof.toJSON()).toEqual(opsHashProof)
-  })
+    const opsHashProof = JSON.parse(fs.readFileSync('./testing/data/opsHashProof.json', 'utf8'));
+    const proofGeneratorProof = await ProofGenerator.buildOpsHashProof(block, operationHash);
+    expect(proofGeneratorProof.toJSON()).toEqual(opsHashProof);
+  });
 
   test('buildBlockHashProof', async () => {
-    const blockHashProof = JSON.parse(fs.readFileSync('./lib/kontera/blockHashProof.json', 'utf8'))
-    const proofGeneratorProof = await ProofGenerator.buildBlockHeaderProof(block)
-
-    expect(proofGeneratorProof.toJSON()).toEqual(blockHashProof)
-  })
-
-  test('buildFullProof', async () => {
-    /*
-    const blockHashProof = JSON.parse(fs.readFileSync('./lib/kontera/blockHashProof.json', 'utf8'))
-    const proofGenerator = new ProofGenerator(tezosContract.getContract(), tezosClient.toolkit)
-    const proofGeneratorProof = await proofGenerator.buildProof(block)
-
-    expect(proofGeneratorProof.toJSON()).toEqual(blockHashProof)
-    */
-  })
-
-})
+    const blockHashProof = JSON.parse(fs.readFileSync('./testing/data/blockHashProof.json', 'utf8'));
+    const proofGeneratorProof = await ProofGenerator.buildBlockHeaderProof(block);
+    expect(proofGeneratorProof.toJSON()).toEqual(blockHashProof);
+  });
+});

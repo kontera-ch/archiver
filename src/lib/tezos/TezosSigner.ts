@@ -1,5 +1,4 @@
 import { MerkleTree } from 'merkletreejs';
-import { blake2bHex } from 'blakejs';
 import { ContractAbstraction, ContractProvider, TezosToolkit } from '@taquito/taquito';
 import { ProofGenerator } from '../kontera/ProofGenerator';
 import { Blake2bOperation } from '@/lib/kontera/proof/operations/types/Blake2bOperation';
@@ -7,8 +6,7 @@ import { Operation } from '@/lib/kontera/proof/operations/Operation';
 import { JoinOperation } from '@/lib/kontera/proof/operations/types/JoinOperation';
 import { Proof } from '@/lib/kontera/proof/Proof';
 import { SerializedTezosBlockHeaderProof } from '../kontera/proof/TezosBlockHeaderProof';
-
-const blake2bHashFunction = (input: string) => blake2bHex(input, undefined, 32);
+import { blake2bHex } from '../kontera/helpers/blake2b';
 
 export class TezosSigner {
   constructor(private contract: ContractAbstraction<ContractProvider>, private tezosToolkit: TezosToolkit, private logger: { log: (msg: string) => void } = { log: console.log }) {
@@ -17,7 +15,7 @@ export class TezosSigner {
 
   private digest(hashesToInclude: Set<string>): { hashes: string[]; merkleTree: MerkleTree } {
     const hashes = [...hashesToInclude.values()];
-    const merkleTree = new MerkleTree([], blake2bHashFunction, { duplicateOdd: true });
+    const merkleTree = new MerkleTree([], blake2bHex, { duplicateOdd: true });
 
     hashes.forEach((data) => merkleTree.addLeaf(Buffer.from(data), true));
 
@@ -47,15 +45,15 @@ export class TezosSigner {
     this.logger.log(`Got block ${level}, created at ${block.header.timestamp}, constructing proof`);
 
     const opGroupProof = await ProofGenerator.buildOpGroupProof(block, opGroup.hash, rootHash);
-    const opHashProof = await ProofGenerator.buildOpsHashProof(block, opGroup.hash)
+    const opHashProof = await ProofGenerator.buildOpsHashProof(block, opGroup.hash);
     const blockHeaderProof = await ProofGenerator.buildBlockHeaderProof(block);
 
-    const tezosProof = blockHeaderProof.prependProof(opHashProof.prependProof(opGroupProof))
+    const tezosProof = blockHeaderProof.prependProof(opHashProof.prependProof(opGroupProof));
 
     const proofs: Array<[string, SerializedTezosBlockHeaderProof]> = [];
 
     hashes.forEach((hash) => {
-      const path = merkleTree.getProof(blake2bHashFunction(hash)) as { position: 'left' | 'right'; data: Buffer }[];
+      const path = merkleTree.getProof(blake2bHex(hash)) as { position: 'left' | 'right'; data: Buffer }[];
       const merkleTreeProof = this.merklePathToProof(Buffer.from(hash), path);
 
       const fullProof = tezosProof.prependProof(merkleTreeProof);
@@ -63,19 +61,20 @@ export class TezosSigner {
       proofs.push([hash, fullProof.toJSON()]);
     });
 
-    return Object.fromEntries(proofs)
+    return Object.fromEntries(proofs);
   }
 
   merklePathToProof(hash: Buffer, merklePath: { position: 'left' | 'right'; data: Buffer }[]) {
     const operations: Operation[] = [new Blake2bOperation()];
 
-    for (const { position, data } of merklePath) {
-      const joinOperation = new JoinOperation({
-        prepend: position == 'left' ? data : undefined,
-        append: position == 'right' ? data : undefined
-      });
-
-      operations.push(joinOperation, new Blake2bOperation());
+    for (const { data, position } of merklePath) {
+      operations.push(
+        new JoinOperation({
+          prepend: position == 'left' ? data : undefined,
+          append: position == 'right' ? data : undefined
+        }),
+        new Blake2bOperation()
+      );
     }
 
     return new Proof({

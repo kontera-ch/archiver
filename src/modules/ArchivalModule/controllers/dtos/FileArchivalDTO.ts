@@ -6,6 +6,9 @@ export class FileArchivalDTO {
     bucket!: string
 
     @IsString()
+    fileHash!: string
+
+    @IsString()
     filePath!: string
 
     @IsUUID()

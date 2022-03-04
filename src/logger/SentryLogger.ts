@@ -1,10 +1,10 @@
-import { INestApplication, Logger } from '@nestjs/common';
+import { ConsoleLogger, INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RewriteFrames } from '@sentry/integrations';
 import * as Sentry from '@sentry/node';
 import * as Tracing from '@sentry/tracing';
 
-export default class SentryLogger extends Logger {
+export default class SentryLogger extends ConsoleLogger {
   private isStartupDone = false;
 
   configureSentry(configService: ConfigService, app: INestApplication) {

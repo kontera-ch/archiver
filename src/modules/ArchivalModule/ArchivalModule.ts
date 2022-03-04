@@ -7,7 +7,8 @@ import { ArchivalController } from './controllers/ArchivalController';
 import { ArchivalService } from './services/ArchivalService';
 import { StampQueueService } from './services/StampQueueService';
 import { PgBossModule } from '../PgBossModule/PgBossModule';
-import { StampWebhookQueueService } from './services/StampWebhookQueueService';
+import { WebhookQueueService } from './services/WebhookQueueService';
+import { ArchiveQueueService } from './services/ArchiveQueueService';
 
 @Module({
   imports: [
@@ -17,7 +18,8 @@ import { StampWebhookQueueService } from './services/StampWebhookQueueService';
   controllers: [ArchivalController],
   providers: [
     StampQueueService,
-    StampWebhookQueueService,
+    WebhookQueueService,
+    ArchiveQueueService,
     {
       provide: ArchivalService,
       inject: [GoogleCloudStorageService],

@@ -1,4 +1,4 @@
-import { File } from '@google-cloud/storage';
+import { CopyOptions, File } from '@google-cloud/storage';
 import { ArchivalProofState } from '@/lib/archival/ArchivalProofState';
 import { ArchivalFileState } from '../../ArchivalFileState';
 import { ColdStorageArchiver } from '../../ColdStorageArchiver';
@@ -18,30 +18,32 @@ export class GoogleStorageArchiver implements ColdStorageArchiver {
     return this.state(metadata.name);
   }
 
-  async exists(hash: string): Promise<ArchivalFileState | undefined> {
-    const exists = await this.googleStorageService.fileExists(hash);
+  async exists(name: string): Promise<ArchivalFileState | undefined> {
+    const exists = await this.googleStorageService.fileExists(name);
 
     if (exists) {
-      return this.state(hash);
+      return this.state(name);
     }
   }
 
-  async archiveFile(file: File, sha256Hash: string): Promise<ArchivalFileState> {
+  async archiveFile(file: File, archiveFileName: string, sha256Hash: string): Promise<ArchivalFileState> {
     const [fileMetadata] = await file.getMetadata()
 
-    const metadata = {
-      originId: fileMetadata.id,
-      originName: fileMetadata.name,
-      originBucket: fileMetadata.bucket,
+    const copyOptions: CopyOptions = {
       contentType: fileMetadata.contentType,
-      sha256Hash,
-      originalFilename: file.name
+      metadata: {
+        originId: fileMetadata.id,
+        originName: fileMetadata.name,
+        originBucket: fileMetadata.bucket,
+        sha256Hash: sha256Hash,
+        originalFilename: file.name
+      }
     }
 
     // change filename to sha256Hash, store old name
-    file.name = sha256Hash;
+    file.name = archiveFileName;
 
-    const [copiedFile] = await file.copy(this.googleStorageService.gcsBucket, metadata);
+    const [copiedFile] = await file.copy(this.googleStorageService.gcsBucket, copyOptions);
     return this.state(copiedFile.name);
   }
 
@@ -65,22 +67,22 @@ export class GoogleStorageArchiver implements ColdStorageArchiver {
 
   async state(filename: string): Promise<ArchivalFileState> {
     const file = await this.googleStorageService.file(filename);
-    const [metadata] = await file.getMetadata();
+    const [gsMetadata] = await file.getMetadata();
 
     return {
       file: {
-        filename: metadata.name,
-        contentType: metadata.contentType
+        filename: gsMetadata.name,
+        contentType: gsMetadata.contentType
       },
       storage: {
         type: this.ADAPTER_TYPE,
         bucket: this.googleStorageService.gcsBucket.name,
-        archivedAt: metadata.timeCreated,
+        archivedAt: gsMetadata.timeCreated,
       },
       metadata: {
-        md5Hash: metadata.md5Hash,
-        sha256Hash: metadata.sha256Hash,
-        size: metadata.size
+        md5Hash: gsMetadata.md5Hash,
+        sha256Hash: gsMetadata.metadata?.sha256Hash,
+        size: gsMetadata.size
       }
     };
   }
