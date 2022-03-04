@@ -1,11 +1,12 @@
 import { ArchivalFileState } from '@/lib/archival/ArchivalFileState';
 import { GoogleCloudStorageService } from '@/modules/GoogleCloud/services/GoogleCloudStorageService';
-import { PgBossConsumerService } from '@/modules/PgBossModule/services/PgBossConsumerService';
+import { JobCompleteCallback, PgBossConsumerService } from '@/modules/PgBossModule/services/PgBossConsumerService';
 import { PgBossService } from '@/modules/PgBossModule/services/PgBossService';
+import { WebhookQueueService } from '@/modules/WebhookModule/services/WebhookQueueService';
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JobWithDoneCallback } from 'pg-boss';
 import { FileArchivalDTO } from '../controllers/dtos/FileArchivalDTO';
-import { WebhookQueueService } from './WebhookQueueService';
 
 export interface ArchiveJobRequest extends FileArchivalDTO {}
 
@@ -18,8 +19,16 @@ export class ArchiveQueueService extends PgBossConsumerService<ArchiveJobRequest
   logger = new Logger(ArchiveQueueService.name);
   queueName = 'archive-queue';
 
-  constructor(private googleCloudStorageService: GoogleCloudStorageService, pgBossService: PgBossService, private webhookQueueService: WebhookQueueService) {
-    super(pgBossService);
+  constructor(
+    private googleCloudStorageService: GoogleCloudStorageService,
+    pgBossService: PgBossService,
+    private webhookQueueService: WebhookQueueService,
+    configService: ConfigService
+  ) {
+    super(pgBossService, {
+      newJobCheckIntervalSeconds: parseInt(configService.get('ARCHIVE_QUEUE_CHECK_INTERVAL_SECONDS', '5')),
+      teamSize: parseInt(configService.get('ARCHIVE_QUEUE_CONCURRENCY', '5'))
+    });
   }
 
   async handler(job: JobWithDoneCallback<ArchiveJobRequest, ArchiveJobResponse>): Promise<any> {
@@ -30,13 +39,13 @@ export class ArchiveQueueService extends PgBossConsumerService<ArchiveJobRequest
     const isFileArchived = await this.googleCloudStorageService.archiver.exists(fileName);
 
     if (isFileArchived) {
-      return { archivalFileState: isFileArchived }
+      return { archivalFileState: isFileArchived };
     }
 
     // we have not, so lets archive it
     const archivalFileState = await this.googleCloudStorageService.archiver.archiveFile(file, fileName, job.data.fileHash);
 
-    return { archivalFileState }
+    return { archivalFileState };
   }
 
   public async schedule(data: any) {
@@ -45,14 +54,17 @@ export class ArchiveQueueService extends PgBossConsumerService<ArchiveJobRequest
     });
   }
 
-  async complete(job: { data: { request: { data: ArchiveJobRequest }; response: ArchiveJobResponse } }) {
-    this.webhookQueueService.schedule({ webhooks: job.data.request.data.webhooks, webhookData: job.data.response },
-      {
-        retryBackoff: true,
-        retryDelay: 60,
-        retryLimit: 10,
-        expireInSeconds: 5
-      }
-    );
+  async complete(job: JobCompleteCallback<ArchiveJobRequest, ArchiveJobResponse>) {
+    if (job.state === 'completed') {
+      this.webhookQueueService.schedule(
+        { webhooks: job.data.request.data.webhooks, webhookData: job.data.response },
+        {
+          retryBackoff: true,
+          retryDelay: 60,
+          retryLimit: 10,
+          expireInSeconds: 5
+        }
+      );
+    }
   }
 }

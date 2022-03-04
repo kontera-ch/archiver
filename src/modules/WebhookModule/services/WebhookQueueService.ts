@@ -3,23 +3,26 @@ import { PgBossConsumerService } from '@/modules/PgBossModule/services/PgBossCon
 import { PgBossService } from '@/modules/PgBossModule/services/PgBossService';
 import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
-import { StampJobResponse } from './StampQueueService';
+import { ConfigService } from '@nestjs/config';
+import { EnvironmentVariables } from '@/EnvironmentVariables';
 
 export interface WebhookJobRequest {
   webhooks: string[];
-  webhookData: any
+  webhookData: any;
 }
 
-export interface WebhookJobResponse {
-}
+export interface WebhookJobResponse {}
 
 @Injectable()
 export class WebhookQueueService extends PgBossConsumerService<WebhookJobRequest, WebhookJobResponse> {
   logger = new Logger(WebhookQueueService.name);
   queueName = 'webhook-queue';
 
-  constructor(pgBossService: PgBossService) {
-    super(pgBossService);
+  constructor(pgBossService: PgBossService, configService: ConfigService<EnvironmentVariables>) {
+    super(pgBossService, {
+      newJobCheckIntervalSeconds: parseInt(configService.get('WEBHOOK_QUEUE_CHECK_INTERVAL_SECONDS', '5')),
+      teamSize: parseInt(configService.get('WEBHOOK_QUEUE_CONCURRENCY', '5'))
+    });
   }
 
   async handler(job: JobWithDoneCallback<WebhookJobRequest, WebhookJobResponse>) {
@@ -28,9 +31,5 @@ export class WebhookQueueService extends PgBossConsumerService<WebhookJobRequest
         return axios.post(webhook, job.data.webhookData);
       })
     );
-  }
-
-  async complete() {
-    return true
   }
 }

@@ -1,30 +1,12 @@
-import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Logger, OnApplicationShutdown } from '@nestjs/common';
 import PgBoss from 'pg-boss';
 
 @Injectable()
-export class PgBossService implements OnModuleInit, OnApplicationShutdown {
+export class PgBossService implements OnApplicationShutdown {
   private readonly logger: Logger = new Logger(PgBossService.name);
-  private boss!: PgBoss;
 
-  constructor(private configService: ConfigService) {
-    //
-  }
-
-  async onModuleInit() {
-    this.boss = new PgBoss({
-      user: this.configService.get('PGBOSS_USERNAME', 'kontera'),
-      password: this.configService.get('PGBOSS_PASSWORD', 'kontera'),
-      database: this.configService.get('PGBOSS_DATABASE', 'kontera-pgboss'),
-      host: this.configService.get('PGBOSS_HOST', 'localhost'),
-      port: this.configService.get('PGBOSST_PORT', 5432),
-      application_name: this.configService.get('PGBOSS_APPLICATION_NAME', 'kontera'),
-      max: 1 // we limit the amount of connections pgBoss has to the PG to 1, as we will scale this with more nodes, not more connections
-    });
-
-    this.boss.on('error', (error: any) => this.logger.error(error));
-
-    await this.boss.start();
+  constructor(private boss: PgBoss) {
+    boss.on('error', (error: any) => this.logger.error(error));
   }
 
   async onApplicationShutdown(signal?: string) {

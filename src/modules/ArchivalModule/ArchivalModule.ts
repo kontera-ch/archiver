@@ -7,18 +7,18 @@ import { ArchivalController } from './controllers/ArchivalController';
 import { ArchivalService } from './services/ArchivalService';
 import { StampQueueService } from './services/StampQueueService';
 import { PgBossModule } from '../PgBossModule/PgBossModule';
-import { WebhookQueueService } from './services/WebhookQueueService';
 import { ArchiveQueueService } from './services/ArchiveQueueService';
+import { WebhookModule } from '../WebhookModule/WebhookModule';
 
 @Module({
   imports: [
     GoogleCloudModule,
+    WebhookModule,
     PgBossModule
   ],
   controllers: [ArchivalController],
   providers: [
     StampQueueService,
-    WebhookQueueService,
     ArchiveQueueService,
     {
       provide: ArchivalService,
