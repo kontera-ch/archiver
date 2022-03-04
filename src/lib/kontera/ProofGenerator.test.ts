@@ -4,16 +4,7 @@ import { ProofGenerator } from './ProofGenerator';
 
 const fs = require('fs');
 
-describe('HighProof', () => {
-  const tezosTestKey = {
-    pkh: 'tz1KozcMMfwv7nXc2wvg9b3dbhfkak1mBbdd',
-    mnemonic: ['rather', 'initial', 'dizzy', 'fold', 'record', 'crack', 'urge', 'among', 'door', 'vehicle', 'item', 'swim', 'menu', 'phone', 'wash'],
-    email: 'brsnsiye.hjyprvgy@teztnets.xyz',
-    password: 'X3Ip5EW5PV',
-    amount: '4389885490',
-    activation_code: '151ad175c146379263555aed39ee34f096cd2527'
-  };
-
+describe('ProofGenerator', () => {
   const fileHash = 'eaf54ba2d3b9564007cbc314d305e4a0c690bdeb28276445cb58f54be79cd6c4';
   const rootHash = '6762af05125f90f2bcdec1ed167ecfb6ddcbf7af87df0c367638a4503f646006';
   const operationHash = 'oozRU4ktAyHVTtfArwv3ravcAAMFmEQp64oscVdsFmEtbBpwP5D';

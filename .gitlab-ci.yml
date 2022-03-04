@@ -20,8 +20,6 @@ test:
     - npm run build
     - npm run test -- --coverage
     - mv coverage/unit/coverage-final.json coverage/unit.json
-    - npm run test:e2e -- --coverage
-    - mv coverage/e2e/coverage-final.json coverage/e2e.json
     - npm run test:nyc -- merge coverage coverage/merged-coverage.json
     - npm run test:nyc -- report -t coverage --reporter=cobertura --reporter=html --reporter=text
   cache:
