@@ -18,7 +18,7 @@ export class PgBossService implements OnModuleInit, OnApplicationShutdown {
       database: this.configService.get('PGBOSS_DATABASE', 'kontera-pgboss'),
       host: this.configService.get('PGBOSS_HOST', 'localhost'),
       port: this.configService.get('PGBOSST_PORT', 5432),
-      application_name: this.configService.get('PGBOSS_APPLICATION_NAME', 'kontera-archiver'),
+      application_name: this.configService.get('PGBOSS_APPLICATION_NAME', 'kontera'),
       max: 1 // we limit the amount of connections pgBoss has to the PG to 1, as we will scale this with more nodes, not more connections
     });
 
