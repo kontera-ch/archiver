@@ -53,7 +53,7 @@ export class StampQueueService extends PgBossConsumerService<StampDTO, StampJobR
   }
 
   async complete(job: JobCompleteCallback<StampDTO, StampJobResponse>) {
-    if (job.state === 'completed') {
+    if (job.data.state === 'completed') {
       this.webhookQueueService.schedule(
         { webhooks: job.data.request.data.webhooks, webhookData: job.data.response },
         {

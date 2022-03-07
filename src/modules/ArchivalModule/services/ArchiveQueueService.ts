@@ -55,7 +55,7 @@ export class ArchiveQueueService extends PgBossConsumerService<ArchiveJobRequest
   }
 
   async complete(job: JobCompleteCallback<ArchiveJobRequest, ArchiveJobResponse>) {
-    if (job.state === 'completed') {
+    if (job.data.state === 'completed') {
       this.webhookQueueService.schedule(
         { webhooks: job.data.request.data.webhooks, webhookData: job.data.response },
         {

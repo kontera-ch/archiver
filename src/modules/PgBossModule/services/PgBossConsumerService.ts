@@ -3,8 +3,7 @@ import { WorkOptions, JobWithDoneCallback, SendOptions } from 'pg-boss';
 import { PgBossService } from './PgBossService';
 
 export type JobCompleteCallback<JobRequest, JobResponse> = {
-  state: 'created' | 'retry' | 'active' | 'completed' | 'expired' | 'cancelled' | 'failed';
-  data: { request: { data: JobRequest }; response: JobResponse };
+  data: { state: 'created' | 'retry' | 'active' | 'completed' | 'expired' | 'cancelled' | 'failed'; request: { data: JobRequest }; response: JobResponse };
 };
 
 export abstract class PgBossConsumerService<JobRequest extends object, JobResponse extends object> implements OnModuleInit {
@@ -17,7 +16,9 @@ export abstract class PgBossConsumerService<JobRequest extends object, JobRespon
 
   public async onModuleInit() {
     this.logger.debug(
-      `Queue [${this.queueName}] [BatchSize=${this.pgBossWorkOptions.batchSize || '1'}] [Concurrency=${this.pgBossWorkOptions.teamSize || 'default'}] [CHECK_INTERVAL=${this.pgBossWorkOptions.newJobCheckIntervalSeconds || '2'}s]`
+      `Queue [${this.queueName}] [BatchSize=${this.pgBossWorkOptions.batchSize || '1'}] [Concurrency=${this.pgBossWorkOptions.teamSize || 'default'}] [CHECK_INTERVAL=${
+        this.pgBossWorkOptions.newJobCheckIntervalSeconds || '2'
+      }s]`
     );
 
     await this.pgBossService.pgBoss().work<JobRequest, JobResponse>(this.queueName, this.pgBossWorkOptions, (job) => {
