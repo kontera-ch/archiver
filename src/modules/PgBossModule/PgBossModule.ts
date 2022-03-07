@@ -1,11 +1,10 @@
 import { EnvironmentVariables } from '@/EnvironmentVariables';
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 import PgBoss from 'pg-boss';
 import { PgBossService } from './services/PgBossService';
 
 @Module({
-  imports: [ConfigModule],
   providers: [{
     provide: PgBossService,
     useFactory: async(configService: ConfigService<EnvironmentVariables>) => {
