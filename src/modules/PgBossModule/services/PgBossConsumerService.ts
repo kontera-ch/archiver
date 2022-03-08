@@ -1,6 +1,7 @@
 import { Logger, OnModuleInit } from '@nestjs/common';
 import { WorkOptions, JobWithDoneCallback, SendOptions } from 'pg-boss';
 import { PgBossService } from './PgBossService';
+import * as Sentry from '@sentry/node';
 
 export type JobCompleteCallback<JobRequest, JobResponse> = {
   data: { state: 'created' | 'retry' | 'active' | 'completed' | 'expired' | 'cancelled' | 'failed'; request: { data: JobRequest }; response: JobResponse };
@@ -21,9 +22,21 @@ export abstract class PgBossConsumerService<JobRequest extends object, JobRespon
       }s]`
     );
 
-    await this.pgBossService.pgBoss().work<JobRequest, JobResponse>(this.queueName, this.pgBossWorkOptions, (job) => {
+    await this.pgBossService.pgBoss().work<JobRequest, JobResponse>(this.queueName, this.pgBossWorkOptions, async (job) => {
       this.logger.log(`job [${Array.isArray(job) ? job.map((j) => j.id) : job.id}] started`);
-      return this.handler(job);
+
+      try {
+        const response = await this.handler(job)
+        return response
+      } catch (error) {
+        Sentry.captureException(error, {
+          extra: {
+            job: job.id,
+            jobData: job.data
+          }
+        });
+        return error
+      }
     });
 
     await this.pgBossService.pgBoss().onComplete(this.queueName, this.complete.bind(this));
