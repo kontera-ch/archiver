@@ -88,7 +88,7 @@ deploy-development:
     - echo $GOOGLE_APPLICATION_CREDENTIALS > ./credentials.json
     - gcloud auth activate-service-account --key-file=./credentials.json
   script:
-    - gcloud run services update development-archiver --ingress internal-and-cloud-load-balancing --platform managed --memory 1Gi --cpu 1 --port 4343 --min-instances=1 --update-labels environment=development,region=zurich --region europe-west6 --project $GOOGLE_PROJECT --image $DOCKER_IMAGE:$CI_COMMIT_SHA --add-cloudsql-instances=$CLOUD_SQL_INSTANCE --set-env-vars ENVIRONMENT=development,PGBOSS_DATABASE=$PGBOSS_DATABASE,PGBOSS_HOST=$PGBOSS_HOST,GOOGLE_SECRET_RESOURCE_ID=$GOOGLE_SECRET_RESOURCE_ID,GCS_ARCHIVE_BUCKET_NAME=$GCS_ARCHIVE_BUCKET_NAME
+    - gcloud run services update development-archiver --ingress internal-and-cloud-load-balancing --platform managed --memory 1Gi --cpu 1 --port 4343 --no-cpu-throttling --min-instances=1 --update-labels environment=development,region=zurich --region europe-west6 --project $GOOGLE_PROJECT --image $DOCKER_IMAGE:$CI_COMMIT_SHA --add-cloudsql-instances=$CLOUD_SQL_INSTANCE --set-env-vars ENVIRONMENT=development,PGBOSS_DATABASE=$PGBOSS_DATABASE,PGBOSS_HOST=$PGBOSS_HOST,GOOGLE_SECRET_RESOURCE_ID=$GOOGLE_SECRET_RESOURCE_ID,GCS_ARCHIVE_BUCKET_NAME=$GCS_ARCHIVE_BUCKET_NAME
     - gcloud run services update-traffic development-archiver --platform managed --region europe-west6 --project $GOOGLE_PROJECT --to-latest
   environment: development
   only:
@@ -115,7 +115,7 @@ deploy-staging:
     - echo $GOOGLE_APPLICATION_CREDENTIALS > ./credentials.json
     - gcloud auth activate-service-account --key-file=./credentials.json
   script:
-    - gcloud run services update staging-archiver --ingress internal-and-cloud-load-balancing --platform managed --memory 2Gi --cpu 2 --port 4343 --min-instances=1 --update-labels environment=staging,region=zurich --region europe-west6 --project $GOOGLE_PROJECT --image $DOCKER_IMAGE:$CI_COMMIT_SHA --add-cloudsql-instances=$CLOUD_SQL_INSTANCE --set-env-vars ENVIRONMENT=staging,TYPEORM_DATABASE=$TYPEORM_DATABASE,TYPEORM_HOST=$TYPEORM_HOST,GOOGLE_SECRET_RESOURCE_ID=$GOOGLE_SECRET_RESOURCE_ID,GCS_ARCHIVE_BUCKET_NAME=$GCS_ARCHIVE_BUCKET_NAME
+    - gcloud run services update staging-archiver --ingress internal-and-cloud-load-balancing --platform managed --memory 1Gi --cpu 1 --port 4343 --no-cpu-throttling --min-instances=1 --update-labels environment=staging,region=zurich --region europe-west6 --project $GOOGLE_PROJECT --image $DOCKER_IMAGE:$CI_COMMIT_SHA --add-cloudsql-instances=$CLOUD_SQL_INSTANCE --set-env-vars ENVIRONMENT=staging,TYPEORM_DATABASE=$TYPEORM_DATABASE,TYPEORM_HOST=$TYPEORM_HOST,GOOGLE_SECRET_RESOURCE_ID=$GOOGLE_SECRET_RESOURCE_ID,GCS_ARCHIVE_BUCKET_NAME=$GCS_ARCHIVE_BUCKET_NAME
     - gcloud run services update-traffic staging-archiver --platform managed --region europe-west6 --project $GOOGLE_PROJECT --to-latest
   environment: staging
   only:
@@ -135,7 +135,7 @@ deploy-production:
     - echo $GOOGLE_APPLICATION_CREDENTIALS > ./credentials.json
     - gcloud auth activate-service-account --key-file=./credentials.json
   script:
-    - gcloud run services update archiver --ingress internal-and-cloud-load-balancing --platform managed --memory 2Gi --cpu 2 --port 4343 --min-instances=1 --update-labels environment=production,region=zurich --region europe-west6 --project $GOOGLE_PROJECT --image $DOCKER_IMAGE:$CI_COMMIT_SHA --add-cloudsql-instances=$CLOUD_SQL_INSTANCE --set-env-vars ENVIRONMENT=production,TYPEORM_DATABASE=$TYPEORM_DATABASE,TYPEORM_HOST=$TYPEORM_HOST,GOOGLE_SECRET_RESOURCE_ID=$GOOGLE_SECRET_RESOURCE_ID,GCS_ARCHIVE_BUCKET_NAME=$GCS_ARCHIVE_BUCKET_NAME
+    - gcloud run services update archiver --ingress internal-and-cloud-load-balancing --platform managed --memory 1Gi --cpu 1 --port 4343 --no-cpu-throttling --min-instances=1 --update-labels environment=production,region=zurich --region europe-west6 --project $GOOGLE_PROJECT --image $DOCKER_IMAGE:$CI_COMMIT_SHA --add-cloudsql-instances=$CLOUD_SQL_INSTANCE --set-env-vars ENVIRONMENT=production,TYPEORM_DATABASE=$TYPEORM_DATABASE,TYPEORM_HOST=$TYPEORM_HOST,GOOGLE_SECRET_RESOURCE_ID=$GOOGLE_SECRET_RESOURCE_ID,GCS_ARCHIVE_BUCKET_NAME=$GCS_ARCHIVE_BUCKET_NAME
     - gcloud run services update-traffic archiver --platform managed --region europe-west6 --project $GOOGLE_PROJECT --to-latest
   environment: production
   only:
