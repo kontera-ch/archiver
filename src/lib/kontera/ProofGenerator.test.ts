@@ -15,7 +15,7 @@ describe('ProofGenerator', () => {
   let tezosContract!: NoopContract;
 
   beforeAll(async () => {
-    tezosClient = new TezosClient();
+    tezosClient = new TezosClient('https://rpc.tzkt.io/hangzhou2net');
     tezosContract = new NoopContract('KT1FzuCxZqCMNYW9rGEHMpHdRsrjZ7eqFS3U', tezosClient.toolkit);
 
     await tezosContract.init();

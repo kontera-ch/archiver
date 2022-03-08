@@ -33,7 +33,7 @@ export class ArchiveQueueService extends PgBossConsumerService<ArchiveJobRequest
 
   async handler(job: JobWithDoneCallback<ArchiveJobRequest, ArchiveJobResponse>): Promise<any> {
     const file = await this.googleCloudStorageService.googleCloudStorageServiceForBucket(job.data.bucket).file(job.data.filePath);
-    const fileName = `${job.data.fileHash}-${job.data.fileId}`;
+    const fileName = `${job.data.fileId}.archive`;
 
     // check if we have previously archived this very file (TODO: do we need to hash in the user id or something?)
     const isFileArchived = await this.googleCloudStorageService.archiver.exists(fileName);
