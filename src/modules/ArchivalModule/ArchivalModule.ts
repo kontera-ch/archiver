@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { NoopContract } from '@/lib/tezos/contract/NoopContract';
 import { TezosClient } from '@/lib/tezos/TezosClient';
 import { GoogleCloudModule } from '../GoogleCloud/GoogleCloudModule';
-import { GoogleCloudStorageService } from '../GoogleCloud/services/GoogleCloudStorageService';
 import { ArchivalController } from './controllers/ArchivalController';
 import { StampingService } from './services/StampingService';
 import { StampQueueService } from './services/StampQueueService';

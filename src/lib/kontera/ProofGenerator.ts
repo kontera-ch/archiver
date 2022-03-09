@@ -1,6 +1,6 @@
 import { BlockResponse, OperationContents, OperationContentsAndResult, OperationContentsAndResultReveal, OperationContentsAndResultTransaction } from '@taquito/rpc';
 import { localForger } from '@taquito/local-forging';
-import bs58check from 'bs58check';
+import { b58cdecode } from '@taquito/utils'
 import { MerkleTree, Path } from '@tzstamp/tezos-merkle';
 import { encodeVariable } from './helpers/encodeVariable';
 import { hexParse } from './helpers/hexParse';
@@ -9,6 +9,7 @@ import { Blake2bOperation } from './proof/operations/types/Blake2bOperation';
 import { JoinOperation } from './proof/operations/types/JoinOperation';
 import TezosBlockHeaderProof from './proof/TezosBlockHeaderProof';
 import { blake2b } from './helpers/blake2b';
+import { compareUInt8Array } from './helpers/compareUInt8Array';
 
 export class ProofGenerator {
   static async buildOpGroupProof(block: BlockResponse, opHash: string, root: Buffer) {
@@ -45,7 +46,7 @@ export class ProofGenerator {
       throw new Error('signature missing from operation');
     }
 
-    const append = bs58check.decode(operationEntry.signature).slice(3);
+    const append = b58cdecode(operationEntry.signature, new Uint8Array([])).slice(3);
 
     const opGroupProof = new Proof({
       hash: root,
@@ -88,9 +89,9 @@ export class ProofGenerator {
   }
 
   private static async buildFourthPassProof(passTree: MerkleTree, opHash: string) {
-    const rawOpHash = bs58check.decode(opHash).slice(2).toString('hex');
+    const rawOpHash = b58cdecode(opHash, new Uint8Array([ 5, 116 ]))
     const allPaths = Array.from(passTree.paths());
-    const opPath: any = allPaths.find((path) => Buffer.from(path.block).toString('hex') === rawOpHash);
+    const opPath: any = allPaths.find((path) => compareUInt8Array(path.block, rawOpHash));
 
     if (!opPath) {
       throw new Error('Target operation group not found in fourth pass');
@@ -111,7 +112,7 @@ export class ProofGenerator {
     const proto = new Uint8Array([block.header.proto]);
 
     // predecessor
-    const predecessor = new Uint8Array(bs58check.decode(block.header.predecessor).slice(2));
+    const predecessor = b58cdecode(block.header.predecessor, new Uint8Array([ 1, 52 ]));
 
     // timestamp
     const unixtimestamp = new Uint8Array(
@@ -134,7 +135,7 @@ export class ProofGenerator {
     const fitness = new Uint8Array(encodeVariable(Buffer.concat(block.header.fitness.map(hexParse).map(encodeVariable))));
 
     // context
-    const context = new Uint8Array(bs58check.decode(block.header.context).slice(2));
+    const context = b58cdecode(block.header.context, new Uint8Array([ 79, 199 ]));
 
     // priority
     const priority = new Uint8Array(hexParse(block.header.priority.toString(16).padStart(4, '0')));
@@ -149,13 +150,13 @@ export class ProofGenerator {
     const seed_nonce_hash = new Uint8Array([0]);
 
     // signature
-    const signature = new Uint8Array(bs58check.decode(block.header.signature).slice(3));
+    const signature = b58cdecode(block.header.signature, new Uint8Array([])).slice(3);
 
     // construct append
     const append = new Uint8Array([...fitness, ...context, ...priority, ...proof_of_work_nonce, ...liquidity_baking_escape_vote, ...seed_nonce_hash, ...signature]);
 
     // hash
-    const hash = new Uint8Array(bs58check.decode(block.header.operations_hash).slice(3));
+    const hash = b58cdecode(block.header.operations_hash, new Uint8Array([ 29, 159, 109 ]));
 
     return new TezosBlockHeaderProof({
       hash,
@@ -172,7 +173,7 @@ export class ProofGenerator {
     for (const operation of block.operations) {
       const merkleTree = new MerkleTree();
       for (const operationEntry of operation) {
-        merkleTree.append(new Uint8Array(bs58check.decode(operationEntry.hash).slice(2)));
+        merkleTree.append(b58cdecode(operationEntry.hash, new Uint8Array([ 5, 116 ])));
       }
       operationPassTrees.push(merkleTree);
     }

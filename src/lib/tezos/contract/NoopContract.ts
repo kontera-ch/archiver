@@ -1,4 +1,5 @@
 import { ContractAbstraction, ContractProvider, TezosToolkit } from '@taquito/taquito';
+import { Expr } from '@taquito/michel-codec'
 
 export class NoopContract {
   private contract?: ContractAbstraction<ContractProvider>;
@@ -20,7 +21,7 @@ export class NoopContract {
     return this.contract;
   }
 
-  static async deploy(toolkit: TezosToolkit, contractFile: string) {
+  static async deploy(toolkit: TezosToolkit, contractFile: Expr[]) {
     const originationOp = await toolkit.contract.originate({
       code: contractFile,
       init: 'Unit'
