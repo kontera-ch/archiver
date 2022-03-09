@@ -1,6 +1,5 @@
 require('dotenv').config('../');
 
-import { b58cencode, prefix, Prefix } from '@taquito/utils';
 import { TezosClient } from '../src/lib/tezos/TezosClient';
 import { NoopContract } from '../src/lib/tezos/contract/NoopContract';
 import fs from 'fs';
