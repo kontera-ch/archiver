@@ -1,14 +1,14 @@
-import { IsArray, IsString, IsUrl, IsUUID } from 'class-validator';
+import { ArrayMinSize, IsArray, IsHexadecimal, IsUrl, IsUUID } from 'class-validator';
 
 export class StampDTO {
-  @IsString()
+  @IsHexadecimal()
   hash!: string;
 
   @IsUUID()
   fileId!: string
 
-  @IsString()
-  @IsUrl()
-  @IsArray({ each: true })
+  @IsUrl({ }, { each: true })
+  @IsArray()
+  @ArrayMinSize(0)
   webhooks: string[] = []
 }
