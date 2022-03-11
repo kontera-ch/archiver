@@ -10,6 +10,9 @@
   "moduleNameMapper": {
     "@/(.*)": "<rootDir>/src/$1"
   },
+  "testPathIgnorePatterns" : [
+    "<rootDir>/scripts/" 
+  ],
   "collectCoverageFrom": ["./src/**/*.ts", "./lib/**/*.ts"],
   "coveragePathIgnorePatterns": ["/node_modules/", "<rootDir>/testing/", ".e2e-spec.ts", ".test.ts"],
   "coverageReporters": ["json"],
