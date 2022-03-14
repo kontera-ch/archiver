@@ -65,12 +65,13 @@ export class ProofGenerator {
       multipassTree.append(passTree.root || blake2b(new Uint8Array()));
     }
 
-    const multipassProof = ProofGenerator.merkleTreePathToProof(multipassTree.path(3));
+    const path = multipassTree.path(3)
+    const multipassProof = ProofGenerator.merkleTreePathToProof(path, path.block);
 
     return multipassProof.prependProof(fourthPassProof);
   }
 
-  private static merkleTreePathToProof(path: Path): Proof {
+  static merkleTreePathToProof(path: Path, hash: Uint8Array): Proof {
     const operations = [new Blake2bOperation()];
 
     for (const { hash, relation } of path.siblings) {
@@ -83,7 +84,7 @@ export class ProofGenerator {
       );
     }
     return new Proof({
-      hash: path.block,
+      hash,
       operations
     });
   }

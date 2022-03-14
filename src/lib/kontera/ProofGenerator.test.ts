@@ -1,6 +1,5 @@
 import { NoopContract } from '../tezos/contract/NoopContract';
 import { TezosClient } from '../tezos/TezosClient';
-import TezosBlockHeaderProof from './proof/TezosBlockHeaderProof';
 import { ProofGenerator } from './ProofGenerator';
 
 const fs = require('fs');
