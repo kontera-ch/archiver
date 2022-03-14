@@ -40,7 +40,7 @@ export class TezosSigner {
     const opGroup = await this.contract.methods.default(rootHashHex).send();
     this.logger.log(`Sent to contract ${this.contract.address}, operation hash ${opGroup.hash}. Waiting for confirmation...`);
 
-    const level = (await opGroup.confirmation(3) - 2);
+    const level = (await opGroup.confirmation(3, 30, 600) - 2);
     this.logger.log(`Confirmation with 3 blocks achieved, fetching block ${level}`);
 
     const block = await this.tezosToolkit.rpc.getBlock({ block: String(level) }); // 2 blocks before 3rd confirmation
