@@ -9,7 +9,7 @@ import { SerializedTezosBlockHeaderProof } from '../kontera/proof/TezosBlockHead
 
 const noOpLogger = (_msg: string): void => {
   // no-op
-}
+};
 export class TezosSigner {
   constructor(private contract: ContractAbstraction<ContractProvider>, private tezosToolkit: TezosToolkit, private logger: { log: (msg: string) => void } = { log: noOpLogger }) {
     //
@@ -40,7 +40,8 @@ export class TezosSigner {
     const opGroup = await this.contract.methods.default(rootHashHex).send();
     this.logger.log(`Sent to contract ${this.contract.address}, operation hash ${opGroup.hash}. Waiting for confirmation...`);
 
-    const level = (await opGroup.confirmation(3, 30, 600) - 2);
+    const receivedBlockLevel = await opGroup.confirmation(3, 30, 360);
+    const level = receivedBlockLevel - 2;
     this.logger.log(`Confirmation with 3 blocks achieved, fetching block ${level}`);
 
     const block = await this.tezosToolkit.rpc.getBlock({ block: String(level) }); // 2 blocks before 3rd confirmation
@@ -54,14 +55,16 @@ export class TezosSigner {
 
     const proofs: Array<[string, SerializedTezosBlockHeaderProof]> = [];
 
-    await Promise.all(hashes.map(async(hash, index) => {
-      const path = merkleTree.path(index);
-      const merkleTreeProof = ProofGenerator.merkleTreePathToProof(path, hash)
+    await Promise.all(
+      hashes.map(async (hash, index) => {
+        const path = merkleTree.path(index);
+        const merkleTreeProof = ProofGenerator.merkleTreePathToProof(path, hash);
 
-      const fullProof = tezosProof.prependProof(merkleTreeProof);
+        const fullProof = tezosProof.prependProof(merkleTreeProof);
 
-      proofs.push([Buffer.from(hash).toString('hex'), fullProof.toJSON()]);
-    }));
+        proofs.push([Buffer.from(hash).toString('hex'), fullProof.toJSON()]);
+      })
+    );
 
     return Object.fromEntries(proofs);
   }
