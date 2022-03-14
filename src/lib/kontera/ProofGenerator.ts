@@ -160,7 +160,6 @@ export class ProofGenerator {
 
     return new TezosBlockHeaderProof({
       hash,
-      level,
       operations: [new JoinOperation({ append, prepend }), new Blake2bOperation()],
       network,
       timestamp
