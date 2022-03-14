@@ -32,13 +32,15 @@ export abstract class PgBossConsumerService<JobRequest extends object, JobRespon
       } catch (error) {
         this.logger.warn(`job [${Array.isArray(job) ? job.map((j) => j.id) : job.id}] failed`);
         this.logger.warn(error)
+        
         Sentry.captureException(error, {
           extra: {
             job: job.id,
             jobData: job.data
           }
         });
-        return error
+        
+        throw error
       }
     });
 
