@@ -1,5 +1,6 @@
 import { NoopContract } from '../tezos/contract/NoopContract';
 import { TezosClient } from '../tezos/TezosClient';
+import TezosBlockHeaderProof from './proof/TezosBlockHeaderProof';
 import { ProofGenerator } from './ProofGenerator';
 
 const fs = require('fs');
@@ -49,5 +50,16 @@ describe('ProofGenerator', () => {
     const blockHashProof = JSON.parse(fs.readFileSync('./testing/data/blockHashProof.json', 'utf8'));
     const proofGeneratorProof = await ProofGenerator.buildBlockHeaderProof(block);
     expect(proofGeneratorProof.toJSON()).toEqual(blockHashProof);
+  });
+
+  test('verify', async () => {
+    const proof = await ProofGenerator.buildOpGroupProof(block, operationHash, Buffer.from(rootHash, 'hex'));
+    const proof2 = await ProofGenerator.buildOpsHashProof(block, operationHash);
+    const proofGeneratorProof = await ProofGenerator.buildBlockHeaderProof(block);
+
+    const combinedProof = proofGeneratorProof.prependProof(proof2.prependProof(proof));
+    const verification = await combinedProof.verify(`https://rpc.tzkt.io/hangzhou2net`)
+
+    expect(verification).toEqual(true)
   });
 });
