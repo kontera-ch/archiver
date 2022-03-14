@@ -3,6 +3,7 @@ import { NoopContract } from '@/lib/tezos/contract/NoopContract';
 import { TezosClient } from '@/lib/tezos/TezosClient';
 import { TezosSigner } from '@/lib/tezos/TezosSigner';
 import { SerializedTezosBlockHeaderProof } from '@/lib/kontera/proof/TezosBlockHeaderProof';
+import { hexParse } from '@/lib/kontera/helpers/hexParse';
 
 @Injectable()
 export class StampingService {
@@ -16,7 +17,7 @@ export class StampingService {
   async commit(hashes: string[]): Promise<{ [x: string]: SerializedTezosBlockHeaderProof }> {
     this.logger.log('commit initiated...');
 
-    const serializedProofs = await this.tezosSigner.commit(new Set(hashes));
+    const serializedProofs = await this.tezosSigner.commit(new Set(hashes.map((hash) => new Uint8Array(hexParse(hash)))));
 
     if (!serializedProofs) {
       this.logger.log('commit cancelled. no hashes to commit.');
@@ -28,6 +29,6 @@ export class StampingService {
 
     this.logger.log(`archived ${Object.keys(serializedProofs).length} proofs.`);
 
-    return serializedProofs
+    return serializedProofs;
   }
 }

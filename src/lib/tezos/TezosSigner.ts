@@ -15,16 +15,16 @@ export class TezosSigner {
     //
   }
 
-  private digest(hashesToInclude: Set<string>): { hashes: string[]; merkleTree: MerkleTree } {
+  private digest(hashesToInclude: Set<Uint8Array>): { hashes: Uint8Array[]; merkleTree: MerkleTree } {
     const hashes = [...hashesToInclude.values()];
     const merkleTree = new MerkleTree();
 
-    hashes.forEach((data) => merkleTree.append(new Uint8Array(Buffer.from(data))));
+    hashes.forEach((data) => merkleTree.append(new Uint8Array(data)));
 
     return { hashes, merkleTree };
   }
 
-  async commit(hashesToInclude: Set<string>): Promise<{ [x: string]: SerializedTezosBlockHeaderProof } | null> {
+  async commit(hashesToInclude: Set<Uint8Array>): Promise<{ [x: string]: SerializedTezosBlockHeaderProof } | null> {
     const { hashes, merkleTree } = this.digest(hashesToInclude);
 
     const rootHash = merkleTree.root;
@@ -54,14 +54,14 @@ export class TezosSigner {
 
     const proofs: Array<[string, SerializedTezosBlockHeaderProof]> = [];
 
-    hashes.forEach((hash, index) => {
+    await Promise.all(hashes.map(async(hash, index) => {
       const path = merkleTree.path(index);
-      const merkleTreeProof = ProofGenerator.merkleTreePathToProof(path, new Uint8Array(Buffer.from(hash, 'hex')))
+      const merkleTreeProof = ProofGenerator.merkleTreePathToProof(path, hash)
 
       const fullProof = tezosProof.prependProof(merkleTreeProof);
 
-      proofs.push([hash, fullProof.toJSON()]);
-    });
+      proofs.push([Buffer.from(hash).toString('hex'), fullProof.toJSON()]);
+    }));
 
     return Object.fromEntries(proofs);
   }
@@ -72,8 +72,8 @@ export class TezosSigner {
     for (const { data, position } of merklePath) {
       operations.push(
         new JoinOperation({
-          prepend: position == 'left' ? data : undefined,
-          append: position == 'right' ? data : undefined
+          prepend: position === 'left' ? data : undefined,
+          append: position === 'right' ? data : undefined
         }),
         new Blake2bOperation()
       );

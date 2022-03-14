@@ -1,4 +1,4 @@
-import { Base58 } from '@tzstamp/helpers';
+import { b58cencode } from '@taquito/utils'
 import axios from 'axios'
 import AbstractProof, { ProofOptions } from './Proof';
 
@@ -49,7 +49,7 @@ export default class TezosBlockHeaderProof extends AbstractProof {
       return currentOperation.commit(previousHash);
     }, this.hash);
 
-    const b58cEncodedBlockHash = Base58.encodeCheck(blockHash,  new Uint8Array([1, 52]))
+    const b58cEncodedBlockHash = b58cencode(blockHash,  new Uint8Array([1, 52]))
 
     const { data: blockData } = await axios.get(`${rpcUrl}/chains/${this.network}/blocks/${b58cEncodedBlockHash}/header`)
 

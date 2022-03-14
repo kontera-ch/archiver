@@ -34,7 +34,7 @@ export class ProofGenerator {
     );
 
     // now comes a hacky part - remove the actual root hash from the binary, as it will get inserted automatically again when we sandwich it with prepend/append
-    const rootHashIndex = Buffer.from(prepend).toString('hex').indexOf(Buffer.from(root).toString('hex'));
+    const rootHashIndex = Buffer.from(prepend).toString('hex').indexOf(root.toString('hex'));
 
     if (rootHashIndex === -1) {
       throw new Error('unable to remove rootHash')

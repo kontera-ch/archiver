@@ -1,11 +1,5 @@
 import { Operation } from "./operations/Operation";
 import { SerializedProof } from "./SerializedProof";
-
-
-export interface ProofOptions {
-
-}
-
 export default abstract class AbstractProof {
 
     operations: Operation[]
@@ -29,7 +23,6 @@ export default abstract class AbstractProof {
     }
 
 }
-
 export interface  ProofOptions {
     hash: Uint8Array
     operations: Operation[]
