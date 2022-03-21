@@ -83,7 +83,7 @@ export class TezosSigner {
             const currentBlock = await this.tezosToolkit.rpc.getBlockHeader({ block: 'head' });
 
             if (currentBlock.level - operationIncludedInBlock >= requiredConfirmations) {
-              this.logger.log(`${currentBlock.level} reached`);
+              this.logger.log(`confirmations: ${currentBlock.level - operationIncludedInBlock}/${requiredConfirmations} reached at ${currentBlock.level}`);
               clearInterval(blockInterval);
               resolve(operationIncludedInBlock);
             } else {
