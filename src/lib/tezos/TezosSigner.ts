@@ -20,7 +20,7 @@ export class TezosSigner {
     private contract: ContractAbstraction<ContractProvider>,
     private tezosToolkit: TezosToolkit,
     private readonly tezosSignerConfiguration: TezosSignerConfiguration,
-    private logger: { log: (msg: string) => void; warn: (msg: string) => void } = { log: noOpLogger, warn: noOpLogger }
+    private logger: { log: (msg: any) => void; warn: (msg: any) => void } = { log: noOpLogger, warn: noOpLogger }
   ) {}
 
   private digest(hashesToInclude: Set<Uint8Array>): { hashes: Uint8Array[]; merkleTree: MerkleTree } {
@@ -47,6 +47,8 @@ export class TezosSigner {
 
     const opGroup = await this.contract.methods.default(rootHashHex).send();
 
+    this.logger.log(opGroup.includedInBlock)
+    this.logger.log(opGroup.destination)
     this.logger.log(`sent to contract ${this.contract.address}, operation hash ${opGroup.hash}. Waiting for confirmation...`);
 
     let operationIncludedInBlock: number;
@@ -57,8 +59,8 @@ export class TezosSigner {
     const intervalDuration = this.tezosSignerConfiguration.pollingIntervalDurationSeconds * 1000;
 
     // wait for at least 3 blocks
-    const level = await new Promise((resolve, reject) => {
-      const blockInterval = setInterval(async () => {
+    const level = await new Promise(async (resolve, reject) => {
+      const checkFct = async () => {
         if (!operationIncludedInBlock) {
           const currentBlock = await this.tezosToolkit.rpc.getBlock({ block: 'head' });
 
@@ -72,6 +74,10 @@ export class TezosSigner {
               }
             });
           }
+
+          if (!operationIncludedInBlock) {
+            this.logger.log(`operation ${opGroup.hash} not yet included`);
+          }
         } else {
           try {
             const currentBlock = await this.tezosToolkit.rpc.getBlockHeader({ block: 'head' });
@@ -81,7 +87,7 @@ export class TezosSigner {
               clearInterval(blockInterval);
               resolve(operationIncludedInBlock);
             } else {
-              this.logger.log(`confirmations: ${currentBlock.level - operationIncludedInBlock}/${requiredConfirmations} (Time left ${Math.round((maxPollingDuration - Date.now() - unixStartedPollingTime) / 1000)})`);
+              this.logger.log(`confirmations: ${currentBlock.level - operationIncludedInBlock}/${requiredConfirmations} (Time left ${Math.round((unixStartedPollingTime + maxPollingDuration - Date.now()) / 1000)}s)`);
 
               if (Date.now() - unixStartedPollingTime > maxPollingDuration) {
                 reject();
@@ -92,7 +98,12 @@ export class TezosSigner {
             this.logger.warn(String(error));
           }
         }
-      }, intervalDuration);
+      }
+      
+      // execute once
+      await checkFct()
+
+      const blockInterval = setInterval(checkFct, intervalDuration);
     });
 
     this.logger.log(`confirmation with 3 blocks achieved, fetching block ${level}`);

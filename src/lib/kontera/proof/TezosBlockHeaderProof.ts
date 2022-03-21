@@ -1,4 +1,4 @@
-import { b58cencode } from '@taquito/utils'
+import { b58cencode, prefix, Prefix } from '@taquito/utils'
 import axios from 'axios'
 import AbstractProof, { ProofOptions } from './Proof';
 
@@ -44,12 +44,16 @@ export default class TezosBlockHeaderProof extends AbstractProof {
     };
   }
 
+  get blockHeaderHash(): string  {
+    return b58cencode(this.derivation, prefix[Prefix.B]);
+  }
+
   async verify(rpcUrl: string): Promise<boolean> {
     const blockHash = this.operations.reduce<Uint8Array>((previousHash, currentOperation) => {
       return currentOperation.commit(previousHash);
     }, this.hash);
 
-    const b58cEncodedBlockHash = b58cencode(blockHash,  new Uint8Array([1, 52]))
+    const b58cEncodedBlockHash = b58cencode(blockHash,  prefix[Prefix.B])
 
     const { data: blockData } = await axios.get(`${rpcUrl}/chains/${this.network}/blocks/${b58cEncodedBlockHash}/header`)
 
