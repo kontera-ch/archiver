@@ -49,13 +49,7 @@ export default class TezosBlockHeaderProof extends AbstractProof {
   }
 
   async verify(rpcUrl: string): Promise<boolean> {
-    const blockHash = this.operations.reduce<Uint8Array>((previousHash, currentOperation) => {
-      return currentOperation.commit(previousHash);
-    }, this.hash);
-
-    const b58cEncodedBlockHash = b58cencode(blockHash,  prefix[Prefix.B])
-
-    const { data: blockData } = await axios.get(`${rpcUrl}/chains/${this.network}/blocks/${b58cEncodedBlockHash}/header`)
+    const { data: blockData } = await axios.get(`${rpcUrl}/chains/${this.network}/blocks/${this.blockHeaderHash}/header`)
 
     if (new Date(blockData.timestamp).getTime() !== new Date(this.timestamp).getTime()) {
       throw new Error('timestamp mismatch')
