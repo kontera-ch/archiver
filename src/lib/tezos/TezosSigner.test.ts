@@ -23,10 +23,7 @@ describe('TezosSigner', () => {
     methods: {
       default: jest.fn(() => ({
         send: jest.fn(() => ({
-          hash: operationHash,
-          confirmation: jest.fn(() => {
-            return 603979
-          })
+          hash: operationHash
         }))
       }))
     }
@@ -34,14 +31,17 @@ describe('TezosSigner', () => {
 
   let mockedToolkit = {
     rpc: {
-      getBlock: jest.fn(() => block)
+      getBlock: jest.fn(() => block),
+      getBlockHeader: jest.fn(() => ({
+        level: 669573
+      }))
     }
   } as unknown as TezosToolkit
 
   beforeAll(async () => {
     tezosClient = new TezosClient('https://rpc.tzkt.io/hangzhou2net');
     tezosContract = new NoopContract('KT1FzuCxZqCMNYW9rGEHMpHdRsrjZ7eqFS3U', tezosClient.toolkit);
-    tezosSigner = new TezosSigner(mockContract, mockedToolkit)
+    tezosSigner = new TezosSigner(mockContract, mockedToolkit, { pollingIntervalDurationSeconds: 1, requiredConfirmations: 3 })
 
     await tezosContract.init();
   });

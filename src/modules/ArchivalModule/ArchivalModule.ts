@@ -37,7 +37,7 @@ import { ConfigService } from '@nestjs/config';
         
         await tezosContract.init();
 
-        return new StampingService(client, tezosContract);
+        return new StampingService(client, tezosContract, configService);
       }
     }
   ],
