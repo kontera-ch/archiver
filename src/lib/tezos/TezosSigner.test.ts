@@ -6,12 +6,11 @@ import { TezosSigner } from './TezosSigner';
 
 const fs = require('fs');
 
-describe('TezosSigner', () => {
+describe('TezosSigner - PtHangz2 Protocol', () => {
   const fileHash = '811a61883036933a8eaeefba466429ff67164e9fbfb178ea15123bf387542018';
   const operationHash = 'opTBQU64LQTxpoba66tA9jy4YPtEyymSgWQgLLAvXHoppG4XSg3';
-  const rootHash = '671aa6da02ccde65c0d7f1b4a44bd6d6e00c7412fbab319f66a9ef44c542d1fc';
 
-  const block = JSON.parse(fs.readFileSync('./testing/data/block-669570.json', 'utf8'));
+  const block = JSON.parse(fs.readFileSync('./testing/data/PtHangz2/block-669570.json', 'utf8'));
 
   let tezosClient!: TezosClient;
   let tezosContract!: NoopContract;
@@ -23,10 +22,7 @@ describe('TezosSigner', () => {
     methods: {
       default: jest.fn(() => ({
         send: jest.fn(() => ({
-          hash: operationHash,
-          confirmation: jest.fn(() => {
-            return 603979
-          })
+          hash: operationHash
         }))
       }))
     }
@@ -34,14 +30,66 @@ describe('TezosSigner', () => {
 
   let mockedToolkit = {
     rpc: {
-      getBlock: jest.fn(() => block)
+      getBlock: jest.fn(() => block),
+      getBlockHeader: jest.fn(() => ({
+        level: 669573
+      }))
     }
   } as unknown as TezosToolkit
 
   beforeAll(async () => {
     tezosClient = new TezosClient('https://rpc.tzkt.io/hangzhou2net');
     tezosContract = new NoopContract('KT1FzuCxZqCMNYW9rGEHMpHdRsrjZ7eqFS3U', tezosClient.toolkit);
-    tezosSigner = new TezosSigner(mockContract, mockedToolkit)
+    tezosSigner = new TezosSigner(mockContract, mockedToolkit, { pollingIntervalDurationSeconds: 1, requiredConfirmations: 3 })
+
+    await tezosContract.init();
+  });
+
+  test('commit a single hash', async () => {
+    const serializedProofs = (await tezosSigner.commit(new Set([new Uint8Array(hexParse(fileHash))])))!
+
+    expect(serializedProofs).toBeDefined()
+    expect(serializedProofs[fileHash]).toBeDefined()
+  });
+
+  
+});
+
+describe('TezosSigner - Psithaca2 Protocol', () => {
+  const fileHash = '811a61883036933a8eaeefba466429ff67164e9fbfb178ea15123bf387542018';
+  const operationHash = 'ontxuSXsy3x7bvN8jgNTkgbfhcsRzyXQYbZ6tzDre8BvKgZAcGt';
+
+  const block = JSON.parse(fs.readFileSync('./testing/data/Psithaca2/block-273045.json', 'utf8'));
+
+  let tezosClient!: TezosClient;
+  let tezosContract!: NoopContract;
+  let tezosSigner!: TezosSigner;
+
+  let mockContract = {
+    address: 'contract-address',
+
+    methods: {
+      default: jest.fn(() => ({
+        send: jest.fn(() => ({
+          hash: operationHash
+        }))
+      }))
+    }
+  } as unknown as ContractAbstraction<ContractProvider>
+
+  let mockedToolkit = {
+    rpc: {
+      getBlock: jest.fn(() => block),
+      getBlockHeader: jest.fn(() => ({
+        level: 273048
+      }))
+    }
+  } as unknown as TezosToolkit
+
+  beforeAll(async () => {
+    tezosClient = new TezosClient('https://rpc.tzkt.io/ithacanet');
+    tezosContract = new NoopContract('KT1P8aqeq8npgMScaRk5214mCSKwhbnwRY2e', tezosClient.toolkit);
+    tezosSigner = new TezosSigner(mockContract, mockedToolkit, { pollingIntervalDurationSeconds: 1, requiredConfirmations: 3 })
 
     await tezosContract.init();
   });

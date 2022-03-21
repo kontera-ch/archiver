@@ -4,12 +4,10 @@ export default abstract class AbstractProof {
 
     operations: Operation[]
     hash: Uint8Array
-    derivation: Uint8Array
 
     constructor(hash: Uint8Array, operations: Operation[]) {
         this.hash = hash
         this.operations = operations
-        this.derivation = this.operations.reduce((hash, operation) => operation.commit(hash), this.hash)
     }
 
     abstract prependProof(proof: AbstractProof): AbstractProof
@@ -22,6 +20,9 @@ export default abstract class AbstractProof {
         }
     }
 
+    get derivation(): Uint8Array {
+        return this.operations.reduce((hash, operation) => operation.commit(hash), this.hash)
+    }
 }
 export interface  ProofOptions {
     hash: Uint8Array
