@@ -6,7 +6,6 @@ import { Operation } from '@/lib/kontera/proof/operations/Operation';
 import { JoinOperation } from '@/lib/kontera/proof/operations/types/JoinOperation';
 import { Proof } from '@/lib/kontera/proof/Proof';
 import { SerializedTezosBlockHeaderProof } from '../kontera/proof/TezosBlockHeaderProof';
-import { writeFileSync } from 'fs';
 
 const noOpLogger = (_msg: string): void => {
   // no-op
@@ -113,20 +112,9 @@ export class TezosSigner {
     this.logger.log(`got block ${level}, created at ${block.header.timestamp}, constructing proof`);
 
     const opGroupProof = await ProofGenerator.buildOpGroupProof(block, opGroup.hash, Buffer.from(rootHash));
-
-    writeFileSync('./opGroupProof.json', JSON.stringify(opGroupProof.toJSON()))
-
     const opHashProof = await ProofGenerator.buildOpsHashProof(block, opGroup.hash);
-
-    writeFileSync('./opHashProof.json', JSON.stringify(opHashProof.toJSON()))
-
     const blockHeaderProof = await ProofGenerator.buildBlockHeaderProof(block);
-
-    writeFileSync('./blockHeaderProof.json', JSON.stringify(blockHeaderProof.toJSON()))
-
     const tezosProof = blockHeaderProof.prependProof(opHashProof.prependProof(opGroupProof));
-
-    writeFileSync('./tezosProof.json', JSON.stringify(tezosProof.toJSON()))
 
     const proofs: Array<[string, SerializedTezosBlockHeaderProof]> = [];
 
