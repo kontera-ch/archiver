@@ -1,5 +1,5 @@
-import { b58cencode, prefix, Prefix } from '@taquito/utils'
-import axios from 'axios'
+import { b58cencode, prefix, Prefix } from '@taquito/utils';
+import axios from 'axios';
 import AbstractProof, { ProofOptions } from './Proof';
 
 export interface TezosBlockHeaderProofOptions extends ProofOptions {
@@ -15,7 +15,6 @@ export interface SerializedTezosBlockHeaderProof {
   network: string;
 }
 
-
 export default class TezosBlockHeaderProof extends AbstractProof {
   public timestamp: Date;
   public network: string;
@@ -27,6 +26,10 @@ export default class TezosBlockHeaderProof extends AbstractProof {
   }
 
   prependProof(proof: AbstractProof): TezosBlockHeaderProof {
+    if (Buffer.from(proof.derivation).toString('hex') !== Buffer.from(this.hash).toString('hex')) {
+      throw new Error('incompatible proof extension');
+    }
+
     return new TezosBlockHeaderProof({
       timestamp: this.timestamp,
       network: this.network,
@@ -44,18 +47,17 @@ export default class TezosBlockHeaderProof extends AbstractProof {
     };
   }
 
-  get blockHeaderHash(): string  {
+  get blockHeaderHash(): string {
     return b58cencode(this.derivation, prefix[Prefix.B]);
   }
 
   async verify(rpcUrl: string): Promise<boolean> {
-    const { data: blockData } = await axios.get(`${rpcUrl}/chains/${this.network}/blocks/${this.blockHeaderHash}/header`)
+    const { data: blockData } = await axios.get(`${rpcUrl}/chains/${this.network}/blocks/${this.blockHeaderHash}/header`);
 
     if (new Date(blockData.timestamp).getTime() !== new Date(this.timestamp).getTime()) {
-      throw new Error('timestamp mismatch')
+      throw new Error('timestamp mismatch');
     }
 
-    return true
+    return true;
   }
-
 }

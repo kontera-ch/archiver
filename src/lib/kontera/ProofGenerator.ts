@@ -21,7 +21,7 @@ export class ProofGenerator {
       throw new Error('operation not found in target-block');
     }
 
-    const [revealOp, transactionOp] = ProofGenerator.seperateOperationContant(operationEntry.contents);
+    const [revealOp, transactionOp] = ProofGenerator.seperateOperationContent(operationEntry.contents);
 
     // operation proof
     const prepend = Uint8Array.from(
@@ -280,7 +280,7 @@ export class ProofGenerator {
     return operationPassTrees;
   }
 
-  static seperateOperationContant(
+  static seperateOperationContent(
     contents: (OperationContents | OperationContentsAndResult)[]
   ): [revealOpreation: OperationContentsAndResultReveal | undefined, transactionOperation: OperationContentsAndResultTransaction] {
     if (contents.length == 1) {

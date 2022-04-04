@@ -6,6 +6,7 @@ import { Operation } from '@/lib/kontera/proof/operations/Operation';
 import { JoinOperation } from '@/lib/kontera/proof/operations/types/JoinOperation';
 import { Proof } from '@/lib/kontera/proof/Proof';
 import { SerializedTezosBlockHeaderProof } from '../kontera/proof/TezosBlockHeaderProof';
+import * as Sentry from '@sentry/node'
 
 const noOpLogger = (_msg: string): void => {
   // no-op
@@ -109,9 +110,45 @@ export class TezosSigner {
     const block = await this.tezosToolkit.rpc.getBlock({ block: String(level) }); // 2 blocks before 3rd confirmation
     this.logger.log(`got block ${level}, created at ${block.header.timestamp}, constructing proof`);
 
+    Sentry.addBreadcrumb({
+      category: 'proof-generation',
+      message: 'block-response',
+      data: {
+        level: String(level),
+        block: JSON.stringify(block)
+      }
+    })
+
     const opGroupProof = await ProofGenerator.buildOpGroupProof(block, opGroup.hash, Buffer.from(rootHash));
+
+    Sentry.addBreadcrumb({
+      category: 'proof-generation',
+      message: 'op-group-proof',
+      data: {
+        opGroupProof: opGroupProof.toJSON()
+      }
+    })
+
     const opHashProof = await ProofGenerator.buildOpsHashProof(block, opGroup.hash);
+
+    Sentry.addBreadcrumb({
+      category: 'proof-generation',
+      message: 'op-group-proof',
+      data: {
+        opHashProof: opHashProof.toJSON()
+      }
+    })
+
     const blockHeaderProof = await ProofGenerator.buildBlockHeaderProof(block);
+
+    Sentry.addBreadcrumb({
+      category: 'proof-generation',
+      message: 'block-header-proof',
+      data: {
+        blockHeaderProof: blockHeaderProof.toJSON()
+      }
+    })
+
     const tezosProof = blockHeaderProof.prependProof(opHashProof.prependProof(opGroupProof));
 
     const proofs: Array<[string, SerializedTezosBlockHeaderProof]> = [];
