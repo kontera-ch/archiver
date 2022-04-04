@@ -111,7 +111,7 @@ export class ProofGenerator {
       return this.buildIthacaCompatibleBlockHeaderProof(block);
     }
 
-    throw `protocol ${block.protocol} not supported, please upgrade`;
+    throw new Error(`protocol ${block.protocol} not supported, please upgrade`);
   }
 
   static buildHangzhouCompatibleBlockHeaderProof(block: BlockResponse) {
@@ -256,6 +256,10 @@ export class ProofGenerator {
     });
 
     if (blockHeaderProof.blockHeaderHash !== block.hash) {
+      console.warn(`blockHeaderHash mismatch: ${blockHeaderProof.blockHeaderHash} vs ${block.hash}`)
+      console.warn(`block #: ${block.header.level}`)
+      console.warn(blockHeaderProof.toJSON())
+
       throw new Error('generated proof does not match block header');
     }
 

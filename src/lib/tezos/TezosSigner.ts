@@ -47,13 +47,11 @@ export class TezosSigner {
 
     const opGroup = await this.contract.methods.default(rootHashHex).send();
 
-    this.logger.log(opGroup.includedInBlock)
-    this.logger.log(opGroup.destination)
     this.logger.log(`sent to contract ${this.contract.address}, operation hash ${opGroup.hash}. Waiting for confirmation...`);
 
     let operationIncludedInBlock: number;
 
-    const maxPollingDuration = 1.5 * (this.tezosSignerConfiguration.requiredConfirmations * 30) * 1000; // block time ~30 seconds, add 1.5x safety margin
+    const maxPollingDuration = 3 * (this.tezosSignerConfiguration.requiredConfirmations * 30) * 1000; // block time ~30 seconds, add 3x safety margin
     const unixStartedPollingTime = Date.now();
     const requiredConfirmations = this.tezosSignerConfiguration.requiredConfirmations;
     const intervalDuration = this.tezosSignerConfiguration.pollingIntervalDurationSeconds * 1000;
@@ -90,7 +88,7 @@ export class TezosSigner {
               this.logger.log(`confirmations: ${currentBlock.level - operationIncludedInBlock}/${requiredConfirmations} (Time left ${Math.round((unixStartedPollingTime + maxPollingDuration - Date.now()) / 1000)}s)`);
 
               if (Date.now() - unixStartedPollingTime > maxPollingDuration) {
-                reject();
+                reject('max confirmation time exceeded');
               }
             }
           } catch (error) {

@@ -19,8 +19,9 @@ export class StampingService {
       this.logger.warn('TEZOS_TIMESTAMPING_POLLING_INTERVAL_DURATION_SECONDS should not be set above 20 seconds, as you might miss blocks (block time ~ 30 seconds)')
     }
 
-    if (requiredConfirmations < 10) {
-      this.logger.warn('TEZOS_TIMESTAMPING_REQUIRED_CONFIRMATIONS below 10 can be considered unsafe')
+    // consider < 3 confirmations unsafe, tenderbake needs 3 confirmations to achieve finality
+    if (requiredConfirmations < 3) {
+      this.logger.warn('TEZOS_TIMESTAMPING_REQUIRED_CONFIRMATIONS below 3 can be considered unsafe')
     }
 
     this.tezosSigner = new TezosSigner(tezosContract.getContract(), tezosClient.toolkit, { pollingIntervalDurationSeconds, requiredConfirmations }, this.logger);
