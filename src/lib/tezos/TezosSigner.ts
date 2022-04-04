@@ -47,8 +47,6 @@ export class TezosSigner {
 
     const opGroup = await this.contract.methods.default(rootHashHex).send();
 
-    this.logger.log(opGroup.includedInBlock)
-    this.logger.log(opGroup.destination)
     this.logger.log(`sent to contract ${this.contract.address}, operation hash ${opGroup.hash}. Waiting for confirmation...`);
 
     let operationIncludedInBlock: number;

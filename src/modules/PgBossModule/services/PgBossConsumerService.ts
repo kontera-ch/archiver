@@ -35,8 +35,8 @@ export abstract class PgBossConsumerService<JobRequest extends object, JobRespon
         
         Sentry.captureException(error, {
           extra: {
-            job: job.id,
-            jobData: job.data
+            job: Array.isArray(job) ? job.map(j => j.id) : job.id,
+            jobData: Array.isArray(job) ? job.map(j => j.data) : job.data
           }
         });
         
