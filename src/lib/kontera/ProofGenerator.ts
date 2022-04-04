@@ -111,7 +111,7 @@ export class ProofGenerator {
       return this.buildIthacaCompatibleBlockHeaderProof(block);
     }
 
-    throw `protocol ${block.protocol} not supported, please upgrade`;
+    throw new Error(`protocol ${block.protocol} not supported, please upgrade`);
   }
 
   static buildHangzhouCompatibleBlockHeaderProof(block: BlockResponse) {
