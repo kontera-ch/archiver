@@ -1,50 +1,85 @@
 import { Logger, OnModuleInit } from '@nestjs/common';
-import { WorkOptions, JobWithDoneCallback, SendOptions } from 'pg-boss';
+import { WorkOptions, Job, SendOptions } from 'pg-boss';
 import { PgBossService } from './PgBossService';
 import * as Sentry from '@sentry/node';
+import { ConfigService } from '@nestjs/config';
+import { EnvironmentVariables } from '@/EnvironmentVariables';
 
 export type JobCompleteCallback<JobRequest, JobResponse> = {
   data: { state: 'created' | 'retry' | 'active' | 'completed' | 'expired' | 'cancelled' | 'failed'; request: { data: JobRequest }; response: JobResponse };
 };
 
-export abstract class PgBossConsumerService<JobRequest extends object, JobResponse extends object> implements OnModuleInit {
+export interface JobResponseObject extends Object {
+  jobId: string
+  success: boolean
+}
+
+export abstract class PgBossConsumerService<JobRequest extends Object, JobResponse extends JobResponseObject> implements OnModuleInit {
   public abstract readonly logger: Logger;
   public abstract readonly queueName: string;
 
-  constructor(private pgBossService: PgBossService, private pgBossWorkOptions: WorkOptions = {}) {
+  constructor(protected pgBossService: PgBossService, private configService: ConfigService<EnvironmentVariables>, protected pgBossWorkOptions: WorkOptions = {}) {
     //
   }
 
   public async onModuleInit() {
-    this.logger.debug(
-      `Queue [${this.queueName}] [BatchSize=${this.pgBossWorkOptions.batchSize || '1'}] [Concurrency=${this.pgBossWorkOptions.teamSize || 'default'}] [CHECK_INTERVAL=${
-        this.pgBossWorkOptions.newJobCheckIntervalSeconds || '2'
-      }s]`
-    );
+    const isPollingEnabled = this.configService.get<string | boolean>('TASK_QUEUE_POLLING_ENABLED', false) === 'true'
 
-    await this.pgBossService.pgBoss().work<JobRequest, JobResponse>(this.queueName, this.pgBossWorkOptions, async (job) => {
-      this.logger.log(`job [${Array.isArray(job) ? job.map((j) => j.id) : job.id}] started`);
-
-      try {
-        const response = await this.handler(job)
-        this.logger.log(`job [${Array.isArray(job) ? job.map((j) => j.id) : job.id}] finished`);
-        return response
-      } catch (error) {
-        this.logger.warn(`job [${Array.isArray(job) ? job.map((j) => j.id) : job.id}] failed`);
-        this.logger.warn(error)
-        
-        Sentry.captureException(error, {
-          extra: {
-            job: Array.isArray(job) ? job.map(j => j.id) : job.id,
-            jobData: Array.isArray(job) ? job.map(j => j.data) : job.data
-          }
-        });
-        
-        throw error
-      }
-    });
+    if (isPollingEnabled) {
+      this.logger.debug(`Queue Auto-Polling [${this.queueName}] [BatchSize=${this.pgBossWorkOptions.batchSize}] [Interval=${this.pgBossWorkOptions.newJobCheckIntervalSeconds}] [TeamConcurrency=${this.pgBossWorkOptions.teamConcurrency}]`);
+      await this.pgBossService.pgBoss().work(this.queueName, this.handler)
+    }
 
     await this.pgBossService.pgBoss().onComplete(this.queueName, this.complete.bind(this));
+  }
+
+  public async fetch(batchSize = 1): Promise<JobResponseObject[]> {
+    const jobResponses: JobResponseObject[] = []
+
+    for (let i = 0; i < batchSize; i++) {
+      jobResponses.push(...await this.fetchBatch(1))
+    }
+
+    return jobResponses
+  }
+
+  public async fetchBatch(batchSize: number): Promise<JobResponseObject[]> {
+    this.logger.debug(`Queue Triggered [${this.queueName}] [BatchSize=${batchSize}]`);
+
+    const job = await this.pgBossService.pgBoss().fetch<JobRequest>(this.queueName, batchSize, this.pgBossWorkOptions);
+
+    if (job) {
+      this.logger.log(`job [${job.map((j) => j.id)}] started`);
+
+      try {
+        const jobResponses = await this.handler(job);
+        this.logger.log(`job [${job.map((j) => j.id)}] finished`);
+
+        await Promise.all(jobResponses.map(async jobResponse => {
+          return this.pgBossService.pgBoss().complete(jobResponse.jobId, jobResponse);
+        }))
+
+        return jobResponses;
+      } catch (error) {
+        this.logger.warn(`job [${job.map((j) => j.id)}] failed`);
+        this.logger.warn(error);
+
+        await Promise.all(job.map(async job => {
+          return this.pgBossService.pgBoss().fail(job.id, { error: String(error) });
+        }))
+
+        Sentry.captureException(error, {
+          extra: {
+            job: job.map((j) => j.id),
+            jobData: job.map((j) => j.data)
+          }
+        });
+
+        return job.map(job => ({ jobId: job.id, success: false }))
+      }
+    }
+
+    return []
   }
 
   public async schedule(data: JobRequest, sendOptions?: SendOptions) {
@@ -57,7 +92,7 @@ export abstract class PgBossConsumerService<JobRequest extends object, JobRespon
     }
   }
 
-  public abstract handler(job: JobWithDoneCallback<JobRequest, JobResponse> | JobWithDoneCallback<JobRequest, JobResponse>[]): Promise<any>;
+  public abstract handler(job: Job<JobRequest> | Job<JobRequest>[]): Promise<JobResponse[]>;
 
   public async complete(_job: JobCompleteCallback<JobRequest, JobResponse>): Promise<any> {
     return true;

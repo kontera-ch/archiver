@@ -4,6 +4,8 @@ import { ArchivalModule } from './modules/ArchivalModule/ArchivalModule';
 import { GoogleCloudModule } from './modules/GoogleCloud/GoogleCloudModule';
 import { GoogleSecretsConfigService } from './modules/GoogleCloud/services/GoogleSecretsConfigService';
 import { TerminusModule } from '@nestjs/terminus';
+import { ProofModule } from './modules/ProofModule/ProofModule';
+import { WebhookModule } from './modules/WebhookModule/WebhookModule';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -12,6 +14,8 @@ import { TerminusModule } from '@nestjs/terminus';
     }),
     TerminusModule,
     ArchivalModule,
+    ProofModule,
+    WebhookModule,
     GoogleCloudModule
   ]
 })

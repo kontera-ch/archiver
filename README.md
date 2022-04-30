@@ -1,5 +1,34 @@
 # Kontera Archiver
 
+# Prerequisites
+The following things are necessary to run the Archiver:
+
+* NodeJS >= v16
+* NPM or compatible package manager
+* PostgreSQL >= v12
+
+Please configure the following environment variables:
+
+```
+# PostgreSQL Task Queue Configuration
+PGBOSS_DATABASE=
+PGBOSS_USERNAME=kontera
+PGBOSS_PASSWORD=kontera
+PGBOSS_HOST=localhost
+PGBOSS_PORT=5432
+
+# Task Queue Configuration
+STAMP_QUEUE_BATCH_SIZE=
+ARCHIVE_QUEUE_BATCH_SIZE=
+WEBHOOK_QUEUE_BATCH_SIZE=
+
+# Google Storage Backend (optional)
+GCS_ARCHIVE_BUCKET_NAME=
+GOOGLE_APPLICATION_CREDENTIALS=
+```
+
+
+
 # Development
 The Kontera Archiver is a NestJS based project, split in two parts.
 
