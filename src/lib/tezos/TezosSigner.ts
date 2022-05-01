@@ -6,7 +6,7 @@ import { Operation } from '@/lib/kontera/proof/operations/Operation';
 import { JoinOperation } from '@/lib/kontera/proof/operations/types/JoinOperation';
 import { Proof } from '@/lib/kontera/proof/Proof';
 import { SerializedTezosBlockHeaderProof } from '../kontera/proof/TezosBlockHeaderProof';
-import * as Sentry from '@sentry/node'
+import * as Sentry from '@sentry/node';
 
 const noOpLogger = (_msg: string): void => {
   // no-op
@@ -46,61 +46,75 @@ export class TezosSigner {
     const rootHashHex = Buffer.from(rootHash).toString('hex');
     this.logger.log(`digested Hash of MerkleTree: ${rootHashHex}`);
 
+    const preCommitBlock = await this.tezosToolkit.rpc.getBlock({ block: 'head' });
+
     const opGroup = await this.contract.methods.default(rootHashHex).send();
 
     this.logger.log(`sent to contract ${this.contract.address}, operation hash ${opGroup.hash}. Waiting for confirmation...`);
 
+    const firstCheckedBlock = preCommitBlock.header.level;
     let operationIncludedInBlock: number;
+    let lastCheckedBlock = firstCheckedBlock;
 
-    const maxPollingDuration = 3 * (this.tezosSignerConfiguration.requiredConfirmations * 30) * 1000; // block time ~30 seconds, add 3x safety margin
-    const unixStartedPollingTime = Date.now();
+    this.logger.log(`starting inclusion check from block #${firstCheckedBlock + 1}...`);
+
+    const maxBlocksToCheck = 50; // check next 50 blocks max
     const requiredConfirmations = this.tezosSignerConfiguration.requiredConfirmations;
     const intervalDuration = this.tezosSignerConfiguration.pollingIntervalDurationSeconds * 1000;
 
     // wait for at least 3 blocks
     const level = await new Promise(async (resolve, reject) => {
       const checkFct = async () => {
-        if (!operationIncludedInBlock) {
-          const currentBlock = await this.tezosToolkit.rpc.getBlock({ block: 'head' });
-
-          this.logger.log(`checking block ${currentBlock.header.level} for inclusion...`);
-
-          for (let i = 3; i >= 0; i--) {
-            currentBlock.operations[i].forEach((op) => {
-              if (op.hash === opGroup.hash) {
-                operationIncludedInBlock = currentBlock.header.level;
-                this.logger.log(`operation ${opGroup.hash} included in block ${operationIncludedInBlock}`);
-              }
-            });
-          }
-
+        try {
           if (!operationIncludedInBlock) {
-            this.logger.log(`operation ${opGroup.hash} not yet included`);
-          }
-        } else {
-          try {
-            const currentBlock = await this.tezosToolkit.rpc.getBlockHeader({ block: 'head' });
+            const currentBlock = await this.tezosToolkit.rpc.getBlock({ block: String(lastCheckedBlock + 1) });
+            lastCheckedBlock = currentBlock.header.level;
+
+            this.logger.log(`checking block #${currentBlock.header.level} for inclusion... (Blocks left ${firstCheckedBlock + maxBlocksToCheck - lastCheckedBlock})`);
+
+            for (let i = 3; i >= 0; i--) {
+              currentBlock.operations[i].forEach((op) => {
+                if (op.hash === opGroup.hash) {
+                  operationIncludedInBlock = currentBlock.header.level;
+                  this.logger.log(`operation ${opGroup.hash} included in block #${operationIncludedInBlock}`);
+                }
+              });
+            }
+
+            if (!operationIncludedInBlock) {
+              this.logger.log(`operation ${opGroup.hash} not yet included`);
+            }
+          } else {
+            const currentBlock = await this.tezosToolkit.rpc.getBlockHeader({ block: String(lastCheckedBlock + 1) });
+            lastCheckedBlock = currentBlock.level;
 
             if (currentBlock.level - operationIncludedInBlock >= requiredConfirmations) {
-              this.logger.log(`confirmations: ${currentBlock.level - operationIncludedInBlock}/${requiredConfirmations} reached at ${currentBlock.level}`);
+              this.logger.log(`confirmations: ${currentBlock.level - operationIncludedInBlock}/${requiredConfirmations} reached at #${currentBlock.level}`);
               clearInterval(blockInterval);
               resolve(operationIncludedInBlock);
             } else {
-              this.logger.log(`confirmations: ${currentBlock.level - operationIncludedInBlock}/${requiredConfirmations} (Time left ${Math.round((unixStartedPollingTime + maxPollingDuration - Date.now()) / 1000)}s)`);
+              this.logger.log(
+                `confirmations: ${currentBlock.level - operationIncludedInBlock}/${requiredConfirmations}`
+              );
 
-              if (Date.now() - unixStartedPollingTime > maxPollingDuration) {
-                reject('max confirmation time exceeded');
+              if (lastCheckedBlock - firstCheckedBlock > maxBlocksToCheck) {
+                reject('max blocks for inclusion-check exceeded');
               }
             }
-          } catch (error) {
+          }
+        } catch (error) {
+          if (String(error).includes('Http error response: (404)')) {
+            this.logger.log('checked block does not exist yet');
+          } else {
             // sth went wrong when fetching the block, but lets just keep polling
             this.logger.warn(String(error));
+            Sentry.captureException(error);
           }
         }
-      }
-      
+      };
+
       // execute once
-      await checkFct()
+      await checkFct();
 
       const blockInterval = setInterval(checkFct, intervalDuration);
     });
@@ -117,7 +131,7 @@ export class TezosSigner {
         level: String(level),
         block: JSON.stringify(block)
       }
-    })
+    });
 
     const opGroupProof = await ProofGenerator.buildOpGroupProof(block, opGroup.hash, Buffer.from(rootHash));
 
@@ -127,7 +141,7 @@ export class TezosSigner {
       data: {
         opGroupProof: opGroupProof.toJSON()
       }
-    })
+    });
 
     const opHashProof = await ProofGenerator.buildOpsHashProof(block, opGroup.hash);
 
@@ -137,7 +151,7 @@ export class TezosSigner {
       data: {
         opHashProof: opHashProof.toJSON()
       }
-    })
+    });
 
     const blockHeaderProof = await ProofGenerator.buildBlockHeaderProof(block);
 
@@ -147,7 +161,7 @@ export class TezosSigner {
       data: {
         blockHeaderProof: blockHeaderProof.toJSON()
       }
-    })
+    });
 
     const tezosProof = blockHeaderProof.prependProof(opHashProof.prependProof(opGroupProof));
 
