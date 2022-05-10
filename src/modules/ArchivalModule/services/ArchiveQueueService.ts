@@ -47,22 +47,8 @@ export class ArchiveQueueService extends PgBossConsumerService<ArchiveJobRequest
       // we have not, so lets archive it
       const archivalFileState = await this.googleCloudStorageService.archiver.archiveFile(file, fileName, job.data.fileHash);
 
-      return { jobId: job.id, success: true, archivalFileState: archivalFileState };
-    });
-
-    return Promise.all(jobPromises);
-  }
-
-  public async schedule(data: any) {
-    super.schedule(data, {
-      onComplete: true
-    });
-  }
-
-  async complete(job: JobCompleteCallback<ArchiveJobRequest, ArchiveJobResponse>) {
-    if (job.data.state === 'completed') {
       this.webhookQueueService.schedule(
-        { webhooks: job.data.request.data.webhooks, webhookData: job.data.response },
+        { webhooks: job.data.webhooks, webhookData: { archivalFileState } },
         {
           retryBackoff: true,
           retryDelay: 60,
@@ -70,6 +56,14 @@ export class ArchiveQueueService extends PgBossConsumerService<ArchiveJobRequest
           expireInSeconds: 5
         }
       );
-    }
+
+      return { jobId: job.id, success: true, archivalFileState: archivalFileState };
+    });
+
+    return Promise.all(jobPromises);
+  }
+
+  public async schedule(data: any) {
+    super.schedule(data);
   }
 }

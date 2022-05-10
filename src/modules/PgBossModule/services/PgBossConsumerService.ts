@@ -29,8 +29,6 @@ export abstract class PgBossConsumerService<JobRequest extends Object, JobRespon
       this.logger.debug(`Queue Auto-Polling [${this.queueName}] [BatchSize=${this.pgBossWorkOptions.batchSize}] [Interval=${this.pgBossWorkOptions.newJobCheckIntervalSeconds}] [TeamConcurrency=${this.pgBossWorkOptions.teamConcurrency}]`);
       await this.pgBossService.pgBoss().work(this.queueName, this.handler)
     }
-
-    await this.pgBossService.pgBoss().onComplete(this.queueName, this.complete.bind(this));
   }
 
   public async fetch(batchSize = 1): Promise<JobResponseObject[]> {
@@ -93,8 +91,4 @@ export abstract class PgBossConsumerService<JobRequest extends Object, JobRespon
   }
 
   public abstract handler(job: Job<JobRequest> | Job<JobRequest>[]): Promise<JobResponse[]>;
-
-  public async complete(_job: JobCompleteCallback<JobRequest, JobResponse>): Promise<any> {
-    return true;
-  }
 }

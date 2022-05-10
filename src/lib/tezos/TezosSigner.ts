@@ -58,7 +58,7 @@ export class TezosSigner {
 
     this.logger.log(`starting inclusion check from block #${firstCheckedBlock + 1}...`);
 
-    const maxBlocksToCheck = 50; // check next 50 blocks max
+    const maxBlocksToCheck = 10; // check next 50 blocks max
     const requiredConfirmations = this.tezosSignerConfiguration.requiredConfirmations;
     const intervalDuration = this.tezosSignerConfiguration.pollingIntervalDurationSeconds * 1000;
 
@@ -88,16 +88,18 @@ export class TezosSigner {
             const currentBlock = await this.tezosToolkit.rpc.getBlockHeader({ block: String(lastCheckedBlock + 1) });
             lastCheckedBlock = currentBlock.level;
 
-            if (currentBlock.level - operationIncludedInBlock >= requiredConfirmations) {
+            const blocksSinceInclusion = currentBlock.level - operationIncludedInBlock
+
+            if (blocksSinceInclusion >= requiredConfirmations) {
               this.logger.log(`confirmations: ${currentBlock.level - operationIncludedInBlock}/${requiredConfirmations} reached at #${currentBlock.level}`);
               clearInterval(blockInterval);
               resolve(operationIncludedInBlock);
             } else {
               this.logger.log(
-                `confirmations: ${currentBlock.level - operationIncludedInBlock}/${requiredConfirmations}`
+                `confirmations: ${blocksSinceInclusion}/${requiredConfirmations}`
               );
 
-              if (lastCheckedBlock - firstCheckedBlock > maxBlocksToCheck) {
+              if (lastCheckedBlock > firstCheckedBlock + maxBlocksToCheck) {
                 reject('max blocks for inclusion-check exceeded');
               }
             }

@@ -40,6 +40,7 @@ export class StampQueueService extends PgBossConsumerService<StampDTO, StampJobR
 
     const serializedProofs = await this.stampingService.commit(hashes);
 
+
     // save proof for each file
     const jobResponses = await Promise.all(
       Object.entries(serializedProofs).map(async ([fileHash, proof]) => {
@@ -54,6 +55,17 @@ export class StampQueueService extends PgBossConsumerService<StampDTO, StampJobR
           contentType: 'application/json'
         });
 
+        // schedule webhooks to notify 
+        await this.webhookQueueService.schedule(
+          { webhooks: foundJob.data.webhooks, webhookData: { hash: fileHash, proof, archivalFileState } },
+          {
+            retryBackoff: true,
+            retryDelay: 60,
+            retryLimit: 10,
+            expireInSeconds: 5
+          }
+        );
+
         return { jobId: foundJob.id, success: true, hash: fileHash, proof, archivalFileState };
       })
     );
@@ -63,22 +75,7 @@ export class StampQueueService extends PgBossConsumerService<StampDTO, StampJobR
 
   public async schedule(data: any) {
     super.schedule(data, {
-      expireInMinutes: 5,
-      onComplete: true
+      expireInMinutes: 5
     });
-  }
-
-  async complete(job: JobCompleteCallback<StampDTO, StampJobResponse>) {
-    if (job.data.state === 'completed') {
-      this.webhookQueueService.schedule(
-        { webhooks: job.data.request.data.webhooks, webhookData: job.data.response },
-        {
-          retryBackoff: true,
-          retryDelay: 60,
-          retryLimit: 10,
-          expireInSeconds: 5
-        }
-      );
-    }
   }
 }

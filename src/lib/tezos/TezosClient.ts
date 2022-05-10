@@ -1,11 +1,12 @@
 import { InMemorySigner } from '@taquito/signer';
 import { TezosToolkit } from '@taquito/taquito';
+import { KonteraRpcClient } from './KonteraRpcClient';
 
 export class TezosClient {
   toolkit: TezosToolkit;
 
   constructor(rpcNode: string) {
-    this.toolkit = new TezosToolkit(rpcNode);
+    this.toolkit = new TezosToolkit(new KonteraRpcClient(rpcNode));
   }
 
   async setupSignerUsingPrivateKey(privateKey: string) {
