@@ -1,3 +1,4 @@
+[![Build](https://github.com/kontera-ch/archiver/actions/workflows/main.yml/badge.svg)](https://github.com/kontera-ch/archiver/actions/workflows/main.yml)
 # Kontera Archiver
 
 # Prerequisites
