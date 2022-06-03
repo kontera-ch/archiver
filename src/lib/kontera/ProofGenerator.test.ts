@@ -4,7 +4,7 @@ import { ProofGenerator } from './ProofGenerator';
 
 const fs = require('fs');
 
-describe('ProofGenerator - PtHangz2', () => {
+describe.skip('ProofGenerator - PtHangz2', () => {
   const rootHash = '6762af05125f90f2bcdec1ed167ecfb6ddcbf7af87df0c367638a4503f646006';
   const operationHash = 'oozRU4ktAyHVTtfArwv3ravcAAMFmEQp64oscVdsFmEtbBpwP5D';
 

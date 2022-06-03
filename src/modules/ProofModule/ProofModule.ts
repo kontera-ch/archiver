@@ -19,7 +19,7 @@ import { ConfigService } from '@nestjs/config';
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
         const contractAddress = configService.get<string>('TEZOS_NOOP_CONTRACT_ADDRESS', 'KT1FzuCxZqCMNYW9rGEHMpHdRsrjZ7eqFS3U')
-        const tezosRpcNode = configService.get<string>('TEZOS_RPC_NODE', 'https://rpc.tzkt.io/hangzhou2net')
+        const tezosRpcNode = configService.get<string>('TEZOS_RPC_NODE', 'https://rpc.tzkt.io/ithacanet')
         const tezosFaucetKey = configService.get<string>('TEZOS_FAUCET_KEY')
         const tezosPrivateKey = configService.get<string>('TEZOS_PRIVATE_KEY')
 

@@ -6,7 +6,7 @@ import { TezosSigner } from './TezosSigner';
 
 const fs = require('fs');
 
-describe('TezosSigner - PtHangz2 Protocol', () => {
+describe.skip('TezosSigner - PtHangz2 Protocol', () => {
   const fileHash = '811a61883036933a8eaeefba466429ff67164e9fbfb178ea15123bf387542018';
   const operationHash = 'opTBQU64LQTxpoba66tA9jy4YPtEyymSgWQgLLAvXHoppG4XSg3';
 
@@ -51,7 +51,6 @@ describe('TezosSigner - PtHangz2 Protocol', () => {
     expect(serializedProofs).toBeDefined()
     expect(serializedProofs[fileHash]).toBeDefined()
   });
-
   
 });
 
