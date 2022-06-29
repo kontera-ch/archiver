@@ -7,6 +7,8 @@ import { JoinOperation } from '@/lib/kontera/proof/operations/types/JoinOperatio
 import { Proof } from '@/lib/kontera/proof/Proof';
 import { SerializedTezosBlockHeaderProof } from '../kontera/proof/TezosBlockHeaderProof';
 import * as Sentry from '@sentry/node';
+import { writeFileSync } from 'fs';
+import { writeFile } from 'fs/promises';
 
 const noOpLogger = (_msg: string): void => {
   // no-op
@@ -149,7 +151,7 @@ export class TezosSigner {
 
     Sentry.addBreadcrumb({
       category: 'proof-generation',
-      message: 'op-group-proof',
+      message: 'ops-hash-proof',
       data: {
         opHashProof: opHashProof.toJSON()
       }

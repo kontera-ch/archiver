@@ -103,6 +103,10 @@ export class ProofGenerator {
   }
 
   static async buildBlockHeaderProof(block: BlockResponse) {
+    if (block.protocol === Protocols.PtJakart2) {
+      return this.buildJakarta2CompatibleBlockHeaderProof(block);
+    }
+
     if (block.protocol === Protocols.PtHangz2) {
       return this.buildHangzhouCompatibleBlockHeaderProof(block);
     }
@@ -112,6 +116,99 @@ export class ProofGenerator {
     }
 
     throw new Error(`protocol ${block.protocol} not supported, please upgrade`);
+  }
+
+  static buildJakarta2CompatibleBlockHeaderProof(block: BlockResponse) {
+    const network = block.chain_id;
+    const timestamp = new Date(block.header.timestamp);
+    const level = block.header.level;
+
+    // level
+    const blockLevel = new Uint8Array(Buffer.from(level.toString(16).padStart(8, '0'), 'hex'));
+
+    // proto
+    const proto = new Uint8Array([block.header.proto]);
+
+    // predecessor
+    const predecessor = b58cdecode(block.header.predecessor, prefix[Prefix.B]);
+
+    // timestamp
+    const unixtimestamp = new Uint8Array(
+      Buffer.from(
+        Math.floor(timestamp.getTime() / 1000)
+          .toString(16)
+          .padStart(16, '0'),
+        'hex'
+      )
+    );
+
+    // validation pass
+    const validationPass = new Uint8Array([block.header.validation_pass]);
+
+    // construct prepend
+    const prepend = new Uint8Array([...blockLevel, ...proto, ...predecessor, ...unixtimestamp, ...validationPass]);
+
+    // fitness
+    const fitness = new Uint8Array(encodeVariable(Buffer.concat(block.header.fitness.map(hexParse).map(encodeVariable))));
+
+    // context
+    const context = b58cdecode(block.header.context, prefix[Prefix.CO]);
+
+    // payload_hash
+    const payload_hash = b58cdecode(block.header.payload_hash!, prefix[Prefix.VH]);
+
+    // payload_hash
+    const payload_round = new Uint8Array(Buffer.from(block.header.payload_round!.toString(16).padStart(8, '0'), 'hex'));
+
+    // proof_of_work_nonce
+    const proof_of_work_nonce = new Uint8Array(hexParse(block.header.proof_of_work_nonce));
+
+    // seed_nonce_hash
+    const seed_nonce_hash = new Uint8Array([0]);
+
+    // liquidity_baking_toggle_vote
+    const liquidity_baking_toggle_vote_encoding = {
+      on: 0,
+      off: 1,
+      pass: 2
+    };
+
+    const liquidity_baking_toggle_vote = new Uint8Array([liquidity_baking_toggle_vote_encoding[block.header.liquidity_baking_toggle_vote!]]);
+
+    // signature
+    const signature = b58cdecode(block.header.signature, prefix[Prefix.SIG]);
+
+    // construct append
+    const append = new Uint8Array([
+      ...fitness,
+      ...context,
+      ...payload_hash,
+      ...payload_round,
+      ...proof_of_work_nonce,
+      ...seed_nonce_hash,
+      ...liquidity_baking_toggle_vote,
+      ...signature
+    ]);
+
+    // hash
+    const hash = b58cdecode(block.header.operations_hash, prefix[Prefix.LLO]);
+
+    const blockHeaderProof = new TezosBlockHeaderProof({
+      hash,
+      operations: [new JoinOperation({ append, prepend }), new Blake2bOperation()],
+      network,
+      timestamp
+    });
+
+    if (blockHeaderProof.blockHeaderHash !== block.hash) {
+      console.warn(`blockHeaderHash mismatch: ${blockHeaderProof.blockHeaderHash} vs ${block.hash}`);
+      console.warn(`block #: ${block.header.level}`);
+      console.warn(blockHeaderProof.toJSON());
+
+      throw new Error('generated proof does not match block header');
+    }
+
+    return blockHeaderProof;
   }
 
   static buildHangzhouCompatibleBlockHeaderProof(block: BlockResponse) {
@@ -156,17 +253,17 @@ export class ProofGenerator {
     // proof_of_work_nonce
     const proof_of_work_nonce = new Uint8Array(hexParse(block.header.proof_of_work_nonce));
 
-    // liquidity_baking_escape_vote
-    const liquidity_baking_escape_vote = new Uint8Array([0]); // we can safely set this to false, as we are post grenada protocol
-
     // seed_nonce_hash
     const seed_nonce_hash = new Uint8Array([0]);
+
+    // liquidity_baking_escape_vote
+    const liquidity_baking_escape_vote = new Uint8Array([0]); // we can safely set this to false, as we are post grenada protocol
 
     // signature
     const signature = b58cdecode(block.header.signature, prefix[Prefix.SIG]);
 
     // construct append
-    const append = new Uint8Array([...fitness, ...context, ...priority, ...proof_of_work_nonce, ...liquidity_baking_escape_vote, ...seed_nonce_hash, ...signature]);
+    const append = new Uint8Array([...fitness, ...context, ...priority, ...proof_of_work_nonce, ...seed_nonce_hash, ...liquidity_baking_escape_vote, ...signature]);
 
     // hash
     const hash = b58cdecode(block.header.operations_hash, prefix[Prefix.LLO]);
@@ -224,11 +321,11 @@ export class ProofGenerator {
     // proof_of_work_nonce
     const proof_of_work_nonce = new Uint8Array(hexParse(block.header.proof_of_work_nonce));
 
-    // liquidity_baking_escape_vote
-    const liquidity_baking_escape_vote = new Uint8Array([0]); // we can safely set this to false, as we are post grenada protocol
-
     // seed_nonce_hash
     const seed_nonce_hash = new Uint8Array([0]);
+
+    // liquidity_baking_escape_vote
+    const liquidity_baking_escape_vote = new Uint8Array([0]); // we can safely set this to false, as we are post grenada protocol
 
     // signature
     const signature = b58cdecode(block.header.signature, prefix[Prefix.SIG]);
@@ -240,8 +337,8 @@ export class ProofGenerator {
       ...payload_hash,
       ...payload_round,
       ...proof_of_work_nonce,
-      ...liquidity_baking_escape_vote,
       ...seed_nonce_hash,
+      ...liquidity_baking_escape_vote,
       ...signature
     ]);
 
@@ -256,9 +353,9 @@ export class ProofGenerator {
     });
 
     if (blockHeaderProof.blockHeaderHash !== block.hash) {
-      console.warn(`blockHeaderHash mismatch: ${blockHeaderProof.blockHeaderHash} vs ${block.hash}`)
-      console.warn(`block #: ${block.header.level}`)
-      console.warn(blockHeaderProof.toJSON())
+      console.warn(`blockHeaderHash mismatch: ${blockHeaderProof.blockHeaderHash} vs ${block.hash}`);
+      console.warn(`block #: ${block.header.level}`);
+      console.warn(blockHeaderProof.toJSON());
 
       throw new Error('generated proof does not match block header');
     }
