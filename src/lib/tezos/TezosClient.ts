@@ -5,8 +5,8 @@ import { KonteraRpcClient } from './KonteraRpcClient';
 export class TezosClient {
   toolkit: TezosToolkit;
 
-  constructor(rpcNode: string) {
-    this.toolkit = new TezosToolkit(new KonteraRpcClient(rpcNode));
+  constructor(rpcNodeOrClient: string | KonteraRpcClient) {
+    this.toolkit = new TezosToolkit(rpcNodeOrClient);
   }
 
   async setupSignerUsingPrivateKey(privateKey: string) {

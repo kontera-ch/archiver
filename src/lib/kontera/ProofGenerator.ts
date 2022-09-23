@@ -103,7 +103,7 @@ export class ProofGenerator {
   }
 
   static async buildBlockHeaderProof(block: BlockResponse) {
-    if (block.protocol === Protocols.PtJakart2) {
+    if (block.protocol === Protocols.PtJakart2 || block.protocol === Protocols.PtKathman) {
       return this.buildJakarta2CompatibleBlockHeaderProof(block);
     }
 
@@ -248,7 +248,7 @@ export class ProofGenerator {
     const context = b58cdecode(block.header.context, prefix[Prefix.CO]);
 
     // priority
-    const priority = new Uint8Array(hexParse(block.header.priority.toString(16).padStart(4, '0')));
+    const priority = new Uint8Array(hexParse(block.header.priority!.toString(16).padStart(4, '0')));
 
     // proof_of_work_nonce
     const proof_of_work_nonce = new Uint8Array(hexParse(block.header.proof_of_work_nonce));

@@ -8,6 +8,7 @@ import { StampQueueService } from './services/StampQueueService';
 import { PgBossModule } from '../PgBossModule/PgBossModule';
 import { WebhookModule } from '../WebhookModule/WebhookModule';
 import { ConfigService } from '@nestjs/config';
+import { KonteraRpcClient } from '@/lib/tezos/KonteraRpcClient';
 
 @Module({
   imports: [GoogleCloudModule, WebhookModule, PgBossModule],
@@ -23,7 +24,7 @@ import { ConfigService } from '@nestjs/config';
         const tezosFaucetKey = configService.get<string>('TEZOS_FAUCET_KEY')
         const tezosPrivateKey = configService.get<string>('TEZOS_PRIVATE_KEY')
 
-        const client = new TezosClient(tezosRpcNode);
+        const client = new TezosClient(new KonteraRpcClient(tezosRpcNode));
         
         if (tezosFaucetKey) {
           await client.setupSignerUsingFaucetKey(JSON.parse(tezosFaucetKey))
