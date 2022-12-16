@@ -69,6 +69,10 @@ export class TezosSigner {
       const checkFct = async () => {
         try {
           if (!operationIncludedInBlock) {
+            if (lastCheckedBlock > firstCheckedBlock + maxBlocksToCheck) {
+              reject('max blocks for inclusion-check exceeded');
+            }
+            
             const currentBlock = await this.tezosToolkit.rpc.getBlock({ block: String(lastCheckedBlock + 1) });
             lastCheckedBlock = currentBlock.header.level;
 
@@ -100,10 +104,6 @@ export class TezosSigner {
               this.logger.log(
                 `confirmations: ${blocksSinceInclusion}/${requiredConfirmations}`
               );
-
-              if (lastCheckedBlock > firstCheckedBlock + maxBlocksToCheck) {
-                reject('max blocks for inclusion-check exceeded');
-              }
             }
           }
         } catch (error) {

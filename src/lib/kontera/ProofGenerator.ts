@@ -103,7 +103,7 @@ export class ProofGenerator {
   }
 
   static async buildBlockHeaderProof(block: BlockResponse) {
-    if (block.protocol === Protocols.PtJakart2 || block.protocol === Protocols.PtKathman) {
+    if (block.protocol === Protocols.PtLimaPtL || block.protocol === Protocols.PtJakart2 || block.protocol === Protocols.PtKathman) {
       return this.buildJakarta2CompatibleBlockHeaderProof(block);
     }
 
